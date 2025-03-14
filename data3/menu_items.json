@@ -1,0 +1,18 @@
+[
+  {
+    "product_id": "1",
+    "name": "Caffe Latte",
+    "description": "Espresso with steamed milk",
+    "price": 3.5,
+    "ingredients": [
+      {
+        "ingredient_id": "espresso_shot",
+        "quantity": 1
+      },
+      {
+        "ingredient_id": "milk",
+        "quantity": 200
+      }
+    ]
+  }
+]

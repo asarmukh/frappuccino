@@ -1,0 +1,14 @@
+[
+  {
+    "ingredient_id": "espresso shot3",
+    "name": "Espresso Shot3",
+    "quantity": 500,
+    "unit": "shots2"
+  },
+  {
+    "ingredient_id": "espresso shot",
+    "name": "Espresso Shot",
+    "quantity": 500,
+    "unit": "shots2"
+  }
+]
