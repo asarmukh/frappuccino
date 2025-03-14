@@ -1,52 +1,96 @@
-# Hot Coffee - Coffee Shop Management System
+# Frappuccino - Coffee Shop Management System with PostgreSQL
 
-A robust backend system for managing coffee shop operations, including order processing, menu management, and inventory tracking. This RESTful API service helps coffee shops streamline their operations by handling orders, tracking inventory, and managing menu items efficiently.
+A modern and scalable backend system for managing coffee shop operations, extending the original Hot Coffee project by migrating from JSON-based storage to a PostgreSQL database. This RESTful API service helps coffee shops streamline their operations with improved data management, advanced reporting capabilities, and enhanced performance.
+
+## Project Overview
+
+Frappuccino is an upgrade to the existing Hot Coffee project, refactoring the data access layer to use PostgreSQL instead of JSON files. This transition enhances scalability, improves data integrity, and enables more complex queries and reporting features.
 
 ## Features
 
+### Core Features (Migrated from Hot Coffee)
 - **Order Management**: Create, retrieve, update, and delete customer orders
 - **Menu Management**: Manage coffee shop menu items and their ingredients
 - **Inventory Tracking**: Track ingredient stock levels and automatically update on order fulfillment
-- **Sales Reporting**: Generate reports on total sales and popular items
-- **JSON-based Storage**: Simple and portable data storage using JSON files
-- **Layered Architecture**: Clean separation of concerns for better maintainability
 
-## Prerequisites
+### New Features
+- **Advanced Reporting**: Enhanced reporting capabilities using SQL aggregation
+- **Full-Text Search**: Search through orders, menu items, and customers
+- **Period-Based Analysis**: View orders grouped by day or month
+- **Inventory Management**: Track leftovers with sorting and pagination
+- **Bulk Order Processing**: Process multiple orders simultaneously with transaction support
+- **Database Optimization**: Proper indexing and relation design for better performance
+
+## Technologies Used
 
 - Go 1.21 or higher
-- No external dependencies required (uses only standard library)
+- PostgreSQL 15
+- Docker & Docker Compose for containerization
+- Third-party PostgreSQL driver
 
-## Installation
+## Project Structure
+
+```
+frappuccino/
+├── cmd/
+│   └── main.go
+├── internal/
+│   ├── handler/
+│   │   ├── order_handler.go
+│   │   ├── menu_handler.go
+│   │   ├── inventory_handler.go
+│   │   └── reports_handler.go
+│   ├── service/
+│   │   ├── order_service.go
+│   │   ├── menu_service.go
+│   │   └── inventory_service.go
+│   └── repository/
+│       ├── order_repository.go
+│       └── ...
+├── models/
+│   ├── order.go
+│   └── ...
+├── Dockerfile
+├── docker-compose.yml
+├── init.sql
+├── go.mod
+└── go.sum
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Docker and Docker Compose installed
+- Go 1.21+ (for development)
+
+### Running the Application
+
+The project is containerized with Docker for easy setup and deployment:
 
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd hot-coffee
+cd frappuccino
 ```
 
-2. Build the application:
+2. Start the application using Docker Compose:
 ```bash
-go build -o hot-coffee .
+docker compose up
 ```
 
-## Usage
+This will:
+- Set up a PostgreSQL database container
+- Initialize the database schema using `init.sql`
+- Build and run the application container
 
-Start the server with optional configuration flags:
-
-```bash
-./hot-coffee --port 8080 --dir ./data
-```
-
-### Command Line Options
-
-- `--port N`: Specify the port number for the HTTP server (default: 8080)
-- `--dir S`: Specify the path to the data directory (default: ./data)
-- `--help`: Display usage information
+The API will be available at `http://localhost:8080`
 
 ## API Endpoints
 
-### Orders
+### Original Endpoints (Refactored for PostgreSQL)
 
+#### Orders
 - `POST /orders` - Create a new order
 - `GET /orders` - Retrieve all orders
 - `GET /orders/{id}` - Retrieve a specific order
@@ -54,70 +98,80 @@ Start the server with optional configuration flags:
 - `DELETE /orders/{id}` - Delete an order
 - `POST /orders/{id}/close` - Close an order
 
-### Menu Items
-
+#### Menu Items
 - `POST /menu` - Add a new menu item
 - `GET /menu` - Retrieve all menu items
 - `GET /menu/{id}` - Retrieve a specific menu item
 - `PUT /menu/{id}` - Update a menu item
 - `DELETE /menu/{id}` - Delete a menu item
 
-### Inventory
-
+#### Inventory
 - `POST /inventory` - Add a new inventory item
 - `GET /inventory` - Retrieve all inventory items
 - `GET /inventory/{id}` - Retrieve a specific inventory item
 - `PUT /inventory/{id}` - Update an inventory item
 - `DELETE /inventory/{id}` - Delete an inventory item
 
-### Reports
-
+#### Basic Reports
 - `GET /reports/total-sales` - Get total sales amount
 - `GET /reports/popular-items` - Get list of popular menu items
 
-## Data Storage
+### New Endpoints
 
-The application uses JSON files for data storage, located in the specified data directory:
+#### Advanced Reporting and Search
+- `GET /orders/numberOfOrderedItems` - Get ordered items count within a date range
+- `GET /reports/search` - Full-text search across orders, menu items, and customers
+- `GET /reports/orderedItemsByPeriod` - Get order counts grouped by day or month
+- `GET /inventory/getLeftOvers` - Get inventory leftovers with sorting and pagination
+- `POST /orders/batch-process` - Process multiple orders simultaneously
 
-- `orders.json` - Stores order information
-- `menu_items.json` - Stores menu items and their ingredients
-- `inventory.json` - Stores inventory levels
+## Database Design
 
-## Project Structure
+The project includes a comprehensive database schema that utilizes PostgreSQL's features:
 
+### Data Types
+- **JSONB**: Used for menu item customization options, order special instructions
+- **Arrays**: Used for item categories/tags, allergen information
+- **ENUM**: Used for order status values, payment methods, item sizes
+- **Timestamp with time zone**: Used for order dates, inventory updates
+
+### Core Tables
+- **orders**: Main order information
+- **order_items**: Individual items in each order
+- **menu_items**: Available products for sale
+- **menu_item_ingredients**: Junction table between menu items and ingredients
+- **inventory**: Available ingredients and stock levels
+- **order_status_history**: Order state changes
+- **price_history**: Menu item price changes
+- **inventory_transactions**: Inventory changes
+
+## Development
+
+### Database Connection Settings
 ```
-hot-coffee/
-├── cmd/
-│   └── main.go
-├── internal/
-│   ├── handler/
-│   │   ├── order_handler.go
-│   │   ├── menu_handler.go
-│   │   └── inventory_handler.go
-│   ├── service/
-│   │   ├── order_service.go
-│   │   ├── menu_service.go
-│   │   └── inventory_service.go
-│   └── dal/
-│       ├── order_repository.go
-│       └── ...
-├── models/
-│   ├── order.go
-│   └── ...
-├── go.mod
-└── go.sum
+Host: db
+Port: 5432
+User: latte
+Password: latte
+Database: frappuccino
 ```
+
+### Database Schema
+The database schema is defined in `init.sql`, which is automatically executed when the containers start.
 
 ## Error Handling
 
 The API returns appropriate HTTP status codes and error messages:
-
 - 200: Successful GET request
 - 201: Successful resource creation
 - 400: Bad request/Invalid input
 - 404: Resource not found
 - 500: Internal server error
 
-## Logging
+## Contributing
 
-The application uses Go's `log/slog` package for logging operations and errors. Logs include timestamps and contextual information for better debugging and monitoring.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
