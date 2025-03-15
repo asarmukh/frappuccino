@@ -64,7 +64,7 @@ func (s OrderService) CreateOrder(order models.Order) (models.Order, error) {
 	order.CreatedAt = time.Now().UTC().Format(time.RFC3339)
 	order.Status = "open"
 
-	if err := s.repository.CreateOrder(order); err != nil {
+	if err := s.repository.AddOrder(order); err != nil {
 		return order, err
 	}
 	log.Printf("Order created: %s", order.ID)

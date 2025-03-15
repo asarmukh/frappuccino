@@ -12,7 +12,7 @@ import (
 )
 
 type MenuServiceInterface interface {
-	AddMenuItem(menuItem models.MenuItem) (models.MenuItem, error)
+	CreateMenuItem(menuItem models.MenuItem) (models.MenuItem, error)
 	GetAllMenuItems() ([]models.MenuItem, error)
 	GetMenuItemByID(id string) (models.MenuItem, error)
 	DeleteMenuItemByID(id string) error
@@ -31,7 +31,7 @@ func NewMenuService(_repository dal.MenuRepositoryInterface, _inventoryService I
 	}
 }
 
-func (m MenuService) AddMenuItem(menuItem models.MenuItem) (models.MenuItem, error) {
+func (m MenuService) CreateMenuItem(menuItem models.MenuItem) (models.MenuItem, error) {
 	words := strings.Fields(menuItem.Name)
 	var newID string
 

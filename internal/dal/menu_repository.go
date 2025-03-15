@@ -3,7 +3,6 @@ package dal
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -38,7 +37,7 @@ func (m MenuRepositoryJSON) AddMenuItem(menuItem models.MenuItem) error {
 
 	menuItems = append(menuItems, menuItem)
 
-	return m.saveMenuItems(menuItems)
+	return m.SaveMenuItems(menuItems)
 }
 
 func (m MenuRepositoryJSON) LoadMenuItems() ([]models.MenuItem, error) {
@@ -62,31 +61,16 @@ func (m MenuRepositoryJSON) LoadMenuItems() ([]models.MenuItem, error) {
 
 func (r MenuRepositoryJSON) SaveMenuItems(menuItems []models.MenuItem) error {
 	filePath := filepath.Join(r.filePath, "menu_items.json")
-	updatedData, err := json.MarshalIndent(menuItems, "", "  ")
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
-		return fmt.Errorf("error marshaling menu items: %v", err)
-	}
-
-	err = ioutil.WriteFile(filePath, updatedData, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("error writing to menu items file: %v", err)
-	}
-
-	return nil
-}
-
-func (m MenuRepositoryJSON) saveMenuItems(menuItems []models.MenuItem) error {
-	filePath := filepath.Join(m.filePath, "menu_items.json")
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0o644)
-	if err != nil {
-		return fmt.Errorf("could not create menu file: %v", err)
+		return fmt.Errorf("could not open or create inventory file: %v", err)
 	}
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(menuItems); err != nil {
-		return fmt.Errorf("could not encode menu items to file: %v", err)
+		return fmt.Errorf("could not encode inventory to file: %v", err)
 	}
 
 	return nil

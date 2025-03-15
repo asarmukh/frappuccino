@@ -113,7 +113,7 @@ func HandleMenu(menuHandler handler.MenuHandler) http.HandlerFunc {
 		switch r.Method {
 		case http.MethodPost:
 			if len(parts) == 1 {
-				menuHandler.HandleAddMenuItem(w, r)
+				menuHandler.HandleCreateMenuItem(w, r)
 			} else {
 				http.Error(w, "Not Found", http.StatusNotFound)
 			}

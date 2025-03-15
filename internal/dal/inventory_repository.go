@@ -10,9 +10,9 @@ import (
 )
 
 type InventoryRepositoryInterface interface {
-	CreateInventory(inventory models.InventoryItem) error
-	SaveInventory(inventories []models.InventoryItem) error
+	AddInventory(inventory models.InventoryItem) error
 	LoadInventory() ([]models.InventoryItem, error)
+	SaveInventory(inventories []models.InventoryItem) error
 }
 
 type InventoryRepositoryJSON struct {
@@ -23,7 +23,7 @@ func NewInventoryRepositoryJSON(filepath string) InventoryRepositoryJSON {
 	return InventoryRepositoryJSON{filePath: filepath}
 }
 
-func (r InventoryRepositoryJSON) CreateInventory(inventory models.InventoryItem) error {
+func (r InventoryRepositoryJSON) AddInventory(inventory models.InventoryItem) error {
 	inventories, err := r.LoadInventory()
 
 	if err != nil && inventories != nil {

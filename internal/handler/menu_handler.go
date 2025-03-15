@@ -12,7 +12,7 @@ import (
 )
 
 type MenuHandlerInterface interface {
-	HandleAddMenuItem(w http.ResponseWriter, r *http.Request)
+	HandleCreateMenuItem(w http.ResponseWriter, r *http.Request)
 	HandleGetAllMenuItems(w http.ResponseWriter, r *http.Request)
 	HandleGetMenuItemById(w http.ResponseWriter, r *http.Request, menuID string)
 	HandleDeleteMenuItemById(w http.ResponseWriter, r *http.Request, menuID string)
@@ -27,7 +27,7 @@ func NewMenuHandler(_menuService service.MenuService) MenuHandler {
 	return MenuHandler{menuService: _menuService}
 }
 
-func (m MenuHandler) HandleAddMenuItem(w http.ResponseWriter, r *http.Request) {
+func (m MenuHandler) HandleCreateMenuItem(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Received request to add a new menu item")
 
 	var NewMenuItem models.MenuItem
@@ -49,7 +49,7 @@ func (m MenuHandler) HandleAddMenuItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	menu, err := m.menuService.AddMenuItem(NewMenuItem)
+	menu, err := m.menuService.CreateMenuItem(NewMenuItem)
 	if err != nil {
 		slog.Error("Failed to add menu item", "error", err)
 		utils.ErrorInJSON(w, http.StatusInternalServerError, err)

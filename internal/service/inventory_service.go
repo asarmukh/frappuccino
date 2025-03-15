@@ -44,7 +44,7 @@ func (s InventoryService) CreateInventory(inventory models.InventoryItem) (model
 
 	inventory.IngredientID = newID
 
-	if err := s.repository.CreateInventory(inventory); err != nil {
+	if err := s.repository.AddInventory(inventory); err != nil {
 		return models.InventoryItem{}, errors.New("inventory exists")
 	}
 
