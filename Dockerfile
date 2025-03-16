@@ -1,4 +1,4 @@
-FROM golang:1.23
+FROM golang:1.22.2
 
 WORKDIR /app
 
@@ -8,4 +8,5 @@ RUN go build -o main .
 
 EXPOSE 8080
 
-CMD ["./frappuccino"]
+CMD ["./main"]
+# edit CMD command accordingly.?
