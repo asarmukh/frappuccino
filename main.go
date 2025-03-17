@@ -77,7 +77,7 @@ func connectDB() *sql.DB {
 	}
 
 	waitForDB(db)
-	fmt.Println("✅ Подключено к PostgreSQL")
+	fmt.Println("✅ Connected to PostgreSQL")
 	return db
 }
 
