@@ -1,11 +1,18 @@
 package models
 
+import "time"
+
 type Order struct {
-	ID           string      `json:"order_id"`
-	CustomerName string      `json:"customer_name"`
-	Items        []OrderItem `json:"items"`
-	Status       string      `json:"status"`
-	CreatedAt    string      `json:"created_at"`
+	ID                  int         `json:"order_id"`
+	CustomerName        string      `json:"customer_name"`
+	Items               []OrderItem `json:"items"`
+	Status              string      `json:"status"`
+	TotalAmount         float64     `json:"total_amount"`
+	SpecialInstructions string      `json:"special_instructions,omitempty"`
+	PaymentMethod       string      `json:"payment_method"`
+	IsCompleted         bool        `json:"is_completed"`
+	CreatedAt           time.Time   `json:"created_at"`
+	UpdatedAt           time.Time   `json:"updated_at"`
 }
 
 type OrderItem struct {
