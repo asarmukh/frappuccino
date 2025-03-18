@@ -1,3 +1,4 @@
+-- database: :memory:
 DROP TABLE IF EXISTS orders CASCADE;
 
 -- Проверяем, существует ли ENUM order_status, чтобы не пытаться создать его дважды

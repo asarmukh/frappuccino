@@ -4,9 +4,9 @@ WORKDIR /app
 
 COPY . .
 
-RUN go build -o main .
+RUN go build -o frappiccino .
 
 EXPOSE 8080
 
-CMD ["./main"]
+CMD ["./frappiccino"]
 # edit CMD command accordingly.?
