@@ -22,7 +22,7 @@ CREATE TABLE orders (
     status order_status NOT NULL DEFAULT 'open',
     total_amount DECIMAL(10, 2) NOT NULL CHECK (total_amount >= 0), -- Для денег
     special_instructions TEXT,
-    payment_method VARCHAR(50),
+    payment_method VARCHAR(50) DEFAULT 'credit card',
     is_completed BOOLEAN NOT NULL DEFAULT FALSE, -- Быстрый фильтр завершённых заказов
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()

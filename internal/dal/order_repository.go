@@ -46,11 +46,11 @@ func (r *OrderPostgresRepository) AddOrder(order models.Order) (models.Order, er
 		).Scan(&customerID)
 
 		if customerErr != nil {
-			log.Printf("Ошибка создания клиента: %v", customerErr)
+			log.Printf("Customer creation error: %v", customerErr)
 			return models.Order{}, customerErr
 		}
 	} else if customerErr != nil {
-		log.Printf("Ошибка поиска клиента: %v", customerErr)
+		log.Printf("Customer search error: %v", customerErr)
 		return models.Order{}, customerErr
 	}
 
@@ -60,7 +60,11 @@ func (r *OrderPostgresRepository) AddOrder(order models.Order) (models.Order, er
 	query := `INSERT INTO orders
 			(customer_id, total_amount, special_instructions, payment_method, is_completed)
 			VALUES ($1, $2, $3, $4, $5)
-			RETURNING id`
+			RETURNING id, status, payment_method`
+
+	if order.PaymentMethod == "" {
+		order.PaymentMethod = "credit card"
+	}
 
 	err := r.db.QueryRow(
 		query,
@@ -69,7 +73,7 @@ func (r *OrderPostgresRepository) AddOrder(order models.Order) (models.Order, er
 		sql.NullString{String: order.SpecialInstructions, Valid: order.SpecialInstructions != ""},
 		order.PaymentMethod,
 		order.IsCompleted,
-	).Scan(&newOrder.ID)
+	).Scan(&newOrder.ID, &newOrder.Status, &newOrder.PaymentMethod)
 
 	if err != nil {
 		log.Printf("Error inserting orderа: %v", err)
@@ -88,7 +92,6 @@ func (r *OrderPostgresRepository) AddOrder(order models.Order) (models.Order, er
 	newOrder.PaymentMethod = order.PaymentMethod
 	newOrder.IsCompleted = order.IsCompleted
 
-	log.Printf("✔ Order successfully added: ID %d", newOrder.ID)
 	return newOrder, nil
 }
 
