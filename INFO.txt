@@ -1,16 +1,24 @@
+*Расширения используемые в проекте: 
+Docker, Dev Containers, Markdown Preview Mermaid Supp, Prettier SQL VSCode, SVG Previewer
+
+pgAdmin for PostgreSQL db
+
 ********** Памятка о просмотре/создании/удалении БД и контейнеров через консоль от tishmal ********
 sudo - от имени администратора
 
 -- удалить и остановить контейнеры:
 sudo docker stop frappuccino_db_1 frappuccino_app_1
 sudo docker rm frappuccino_db_1 frappuccino_app_1
+
+sudo docker stop frappuccino-db-1 frappuccino-app-1
+sudo docker rm frappuccino-db-1 frappuccino-app-1
 -- или все:
 sudo docker compose down -v
 
 --Проверить созданные тома снова можно командой:
 docker volume ls
 
--- Запуск докера, сервисов в в docker-compose.yml:
+-- Запуск докера, сервисов в docker-compose.yml:
 docker compose up
 
 --показывает список запущенных контейнеров в Docker:
@@ -34,3 +42,24 @@ psql -U latte -d frappuccino
 \dt — список таблиц в базе
 \d имя_таблицы — структура таблицы
 SELECT * FROM имя_таблицы; — просмотр данных
+
+
+
+sudo groupadd docker  # Создаст группу docker (если ее нет)
+sudo usermod -aG docker $USER  # Добавит тебя в группу docker
+newgrp docker  # Применит изменения без выхода из системы
+
+
+
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+
+docker-compose down
+docker-compose build --no-cache
+docker-compose up
+
+Если ничего не помогает, возможно, приложение запускается из другого места или используется старая версия образа. В таком случае, вы можете также попробовать:
+bashCopydocker-compose down
+docker system prune -a  # Удалит все неиспользуемые образы и контейнеры
+docker-compose up --build

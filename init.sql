@@ -1,3 +1,4 @@
+-- database: :memory:
 DROP TABLE IF EXISTS customers CASCADE;
 DROP TABLE IF EXISTS orders CASCADE;
 DROP TABLE IF EXISTS order_items CASCADE;
