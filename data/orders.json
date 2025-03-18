@@ -1,86 +1,62 @@
 [
   {
-    "order_id": "order1",
-    "customer_name": "2Johyn Snow2",
+    "order_id": "order123",
+    "customer_name": "Alice Smith",
     "items": [
       {
-        "product_id": "1",
+        "product_id": "latte",
+        "quantity": 2
+      },
+      {
+        "product_id": "muffin",
         "quantity": 1
       }
     ],
     "status": "open",
-    "created_at": "2025-02-13T20:12:33Z"
+    "created_at": "2023-10-01T09:00:00Z"
   },
   {
-    "order_id": "order4",
-    "customer_name": "2Johyn Snow2",
+    "order_id": "order124",
+    "customer_name": "Bob Johnson",
     "items": [
       {
-        "product_id": "1",
+        "product_id": "espresso",
         "quantity": 1
       }
     ],
-    "status": "open",
-    "created_at": "2025-02-13T20:12:47Z"
-  },
-  {
-    "order_id": "order5",
-    "customer_name": "2Johyn Snow2",
-    "items": [
-      {
-        "product_id": "1",
-        "quantity": 1
-      }
-    ],
-    "status": "open",
-    "created_at": "2025-02-13T20:12:56Z"
-  },
-  {
-    "order_id": "order6",
-    "customer_name": "2Johyn Snow2",
-    "items": [
-      {
-        "product_id": "1",
-        "quantity": 1
-      }
-    ],
-    "status": "open",
-    "created_at": "2025-02-13T20:13:35Z"
-  },
-  {
-    "order_id": "order7",
-    "customer_name": "2Johyn Snow2",
-    "items": [
-      {
-        "product_id": "1",
-        "quantity": 1
-      }
-    ],
-    "status": "open",
-    "created_at": "2025-02-13T20:13:42Z"
-  },
-  {
-    "order_id": "order8",
-    "customer_name": "2Johyn Snow2",
-    "items": [
-      {
-        "product_id": "1",
-        "quantity": 1
-      }
-    ],
-    "status": "open",
-    "created_at": "2025-02-13T20:13:46Z"
+    "status": "closed",
+    "created_at": "2023-10-01T09:30:00Z"
   },
   {
     "order_id": "order2",
-    "customer_name": "2Johyn Snow2",
+    "customer_name": "John Doe",
     "items": [
       {
-        "product_id": "1",
+        "product_id": "espresso",
+        "quantity": 2
+      },
+      {
+        "product_id": "muffin",
         "quantity": 1
       }
     ],
-    "status": "open",
-    "created_at": "2025-02-13T20:14:06Z"
+    "status": "closed",
+    "created_at": "2025-03-18T09:28:53Z"
+  },
+  {
+    "order_id": "order3",
+    "customer_name": "John Doe",
+    "items": [
+      {
+        "product_id": "espresso",
+        "quantity": 2
+      },
+      {
+        "product_id": "muffin",
+        "quantity": 1
+      }
+    ],
+    "status": "closed",
+    "created_at": "2025-03-18T09:29:50Z"
   }
 ]

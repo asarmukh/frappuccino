@@ -1,44 +1,32 @@
 [
   {
-    "ingredient_id": "blueberries",
-    "name": "Blueberries",
-    "quantity": 560,
-    "unit": "g"
-  },
-  {
-    "ingredient_id": "sugar",
-    "name": "Sugar",
-    "quantity": 4340,
-    "unit": "g"
+    "ingredient_id": "espresso_shot",
+    "name": "Espresso Shot",
+    "quantity": 496,
+    "unit": "shots"
   },
   {
     "ingredient_id": "milk",
     "name": "Milk",
-    "quantity": 0,
+    "quantity": 5000,
     "unit": "ml"
   },
   {
     "ingredient_id": "flour",
     "name": "Flour",
-    "quantity": 9000,
+    "quantity": 9800,
     "unit": "g"
   },
   {
-    "ingredient_id": "gfdgf",
-    "name": "gfdgf",
-    "quantity": 9000,
+    "ingredient_id": "blueberries",
+    "name": "Blueberries",
+    "quantity": 1960,
     "unit": "g"
   },
   {
-    "ingredient_id": "fsefes",
-    "name": "fsefes",
-    "quantity": 9000,
+    "ingredient_id": "sugar",
+    "name": "Sugar",
+    "quantity": 4940,
     "unit": "g"
-  },
-  {
-    "ingredient_id": "espresso shot",
-    "name": "Espresso Shot",
-    "quantity": 500,
-    "unit": "shots"
   }
 ]
