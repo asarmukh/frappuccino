@@ -23,46 +23,75 @@ func NewOrderPostgresRepository(db *sql.DB) *OrderPostgresRepository {
 }
 
 func (r *OrderPostgresRepository) AddOrder(order models.Order) (models.Order, error) {
+	// Валидация здесь не нужна вынесу в сервисы потом
 	if order.CustomerName == "" {
 		return models.Order{}, errors.New("customer name cannot be empty")
 	}
 	if order.TotalAmount < 0 {
 		return models.Order{}, errors.New("total amount cannot be negative")
 	}
-	if order.PaymentMethod == "" {
-		return models.Order{}, errors.New("payment method is required")
+
+	// Находим или создаем клиента по имени
+	var customerID int
+	customerErr := r.db.QueryRow(
+		"SELECT id FROM customers WHERE name = $1",
+		order.CustomerName,
+	).Scan(&customerID)
+
+	if customerErr == sql.ErrNoRows {
+		// Клиент не существует, создаем нового
+		customerErr = r.db.QueryRow(
+			"INSERT INTO customers (name) VALUES ($1) RETURNING id",
+			order.CustomerName,
+		).Scan(&customerID)
+
+		if customerErr != nil {
+			log.Printf("Customer creation error: %v", customerErr)
+			return models.Order{}, customerErr
+		}
+	} else if customerErr != nil {
+		log.Printf("Customer search error: %v", customerErr)
+		return models.Order{}, customerErr
 	}
 
-	query := `INSERT INTO orders 
-        (customer_name, status, total_amount, special_instructions, payment_method, is_completed, created_at, updated_at) 
-        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) 
-        RETURNING id, created_at, updated_at`
-
+	// Создаем заказ
 	var newOrder models.Order
+
+	query := `INSERT INTO orders
+			(customer_id, total_amount, special_instructions, payment_method, is_completed)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id, status, payment_method`
+
+	if order.PaymentMethod == "" {
+		order.PaymentMethod = "credit card"
+	}
+
 	err := r.db.QueryRow(
 		query,
-		order.CustomerName,
-		order.Status,
+		customerID,
 		order.TotalAmount,
 		sql.NullString{String: order.SpecialInstructions, Valid: order.SpecialInstructions != ""},
 		order.PaymentMethod,
 		order.IsCompleted,
-	).Scan(&newOrder.ID, &newOrder.CreatedAt, &newOrder.UpdatedAt)
+	).Scan(&newOrder.ID, &newOrder.Status, &newOrder.PaymentMethod)
 
 	if err != nil {
-		log.Printf("Ошибка вставки заказа: %v", err)
+		log.Printf("Error inserting orderа: %v", err)
 		return models.Order{}, err
+	}
+
+	// Сохраняем Items в модели, если они есть
+	if len(order.Items) > 0 {
+		newOrder.Items = order.Items
 	}
 
 	// Присваиваем остальные поля
 	newOrder.CustomerName = order.CustomerName
-	newOrder.Status = order.Status
 	newOrder.TotalAmount = order.TotalAmount
 	newOrder.SpecialInstructions = order.SpecialInstructions
 	newOrder.PaymentMethod = order.PaymentMethod
 	newOrder.IsCompleted = order.IsCompleted
 
-	log.Printf("Заказ успешно добавлен: ID %s", newOrder.ID)
 	return newOrder, nil
 }
 

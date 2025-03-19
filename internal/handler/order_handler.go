@@ -44,7 +44,7 @@ func (h OrderHandler) HandleCreateOrder(w http.ResponseWriter, r *http.Request) 
 		utils.ErrorInJSON(w, 400, err)
 		return
 	} else {
-		slog.Info("Order created successfully", "orderID", order.ID)
+		slog.Info("✔ Order created successfully", "orderID", order.ID)
 		utils.ResponseInJSON(w, 201, order)
 	}
 }

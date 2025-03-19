@@ -1,8 +1,6 @@
 package service
 
 import (
-	"log"
-
 	"frappuccino/internal/dal"
 	"frappuccino/models"
 	"frappuccino/utils"
@@ -50,7 +48,6 @@ func (s OrderService) CreateOrder(order models.Order) (models.Order, error) {
 	if err != nil {
 		return models.Order{}, err
 	}
-	log.Printf("Order created: %d", newOrder.ID)
 	return newOrder, nil
 }
 
