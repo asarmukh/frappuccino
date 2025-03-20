@@ -15,7 +15,6 @@ erDiagram
     customers {
         int id PK
         varchar name
-        varchar email
         varchar phone
         jsonb preferences
         timestamp_tz created_at

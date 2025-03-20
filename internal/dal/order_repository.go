@@ -3,9 +3,8 @@ package dal
 import (
 	"database/sql"
 	"errors"
-	"log"
-
 	"frappuccino/models"
+	"log"
 )
 
 type OrderRepositoryInterface interface {
@@ -60,11 +59,7 @@ func (r *OrderPostgresRepository) AddOrder(order models.Order) (models.Order, er
 	query := `INSERT INTO orders
 			(customer_id, total_amount, special_instructions, payment_method, is_completed)
 			VALUES ($1, $2, $3, $4, $5)
-			RETURNING id, status, payment_method`
-
-	if order.PaymentMethod == "" {
-		order.PaymentMethod = "credit card"
-	}
+			RETURNING id, status, payment_method, created_at`
 
 	err := r.db.QueryRow(
 		query,
@@ -73,8 +68,7 @@ func (r *OrderPostgresRepository) AddOrder(order models.Order) (models.Order, er
 		sql.NullString{String: order.SpecialInstructions, Valid: order.SpecialInstructions != ""},
 		order.PaymentMethod,
 		order.IsCompleted,
-	).Scan(&newOrder.ID, &newOrder.Status, &newOrder.PaymentMethod)
-
+	).Scan(&newOrder.ID, &newOrder.Status, &newOrder.PaymentMethod, &newOrder.CreatedAt)
 	if err != nil {
 		log.Printf("Error inserting orderа: %v", err)
 		return models.Order{}, err

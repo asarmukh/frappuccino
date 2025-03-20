@@ -16,7 +16,7 @@ DROP TABLE IF EXISTS staff CASCADE;
 DO $$ 
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_status') THEN
-        CREATE TYPE order_status AS ENUM ('pending', 'open', 'in_progress', 'close', 'cancelled');
+        CREATE TYPE order_status AS ENUM ('open', 'in_progress', 'close', 'cancelled');
     END IF;
 END $$;
 
@@ -52,7 +52,6 @@ END $$;
 CREATE TABLE customers (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
-    email VARCHAR(50) NOT NULL UNIQUE,
     phone VARCHAR(50),
     preferences JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -98,7 +97,7 @@ CREATE TABLE menu_items (
 CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
     customer_id INT REFERENCES customers(id) ON DELETE SET NULL,
-    status order_status NOT NULL DEFAULT 'pending',
+    status order_status NOT NULL DEFAULT 'open',
     total_amount DECIMAL(10, 2) NOT NULL CHECK (total_amount >= 0), -- Для денег
     special_instructions JSONB,
     payment_method payment_method NOT NULL DEFAULT 'cash',
@@ -129,7 +128,7 @@ CREATE TABLE order_items (
 CREATE TABLE order_status_history (
     id SERIAL PRIMARY KEY,
     order_id INT REFERENCES orders(id) ON DELETE CASCADE,
-    status order_status NOT NULL DEFAULT 'pending',
+    status order_status NOT NULL DEFAULT 'open',
     staff_id INT REFERENCES staff(id) ON DELETE SET NULL,
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
