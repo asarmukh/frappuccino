@@ -1,9 +1,9 @@
 package service
 
 import (
+	"fmt"
 	"frappuccino/internal/dal"
 	"frappuccino/models"
-	"frappuccino/utils"
 )
 
 type OrderServiceInterface interface {
@@ -16,12 +16,14 @@ type OrderServiceInterface interface {
 }
 
 type OrderService struct {
-	repository       *dal.OrderPostgresRepository
+	repository       *dal.OrderRepository
 	menuService      MenuService
 	inventoryService InventoryService
+	customerRepo     dal.CustomerRepository
+	orderRepo        *dal.OrderRepository
 }
 
-func NewOrderService(_repository *dal.OrderPostgresRepository, _menuService MenuService, _inventoryService InventoryService) OrderService {
+func NewOrderService(_repository *dal.OrderRepository, _menuService MenuService, _inventoryService InventoryService) OrderService {
 	return OrderService{
 		repository:       _repository,
 		menuService:      _menuService,
@@ -29,25 +31,40 @@ func NewOrderService(_repository *dal.OrderPostgresRepository, _menuService Menu
 	}
 }
 
-func (s OrderService) CreateOrder(order models.Order) (models.Order, error) {
-	if err := utils.IsValidName(order.CustomerName); err != nil {
-		return models.Order{}, err
+func (s *OrderService) CreateOrder(order models.Order) (models.Order, error) {
+	// Найти клиента или создать нового
+	customerID, err := s.customerRepo.FindByName(order.CustomerName)
+	if err != nil {
+		return models.Order{}, fmt.Errorf("error finding customer: %w", err)
 	}
 
-	menu, err := s.menuService.repository.LoadMenuItems()
-	if err != nil {
-		return models.Order{}, err
+	if customerID == 0 { // Если клиента нет, создаем его
+		customerID, err = s.customerRepo.AddCustomer(order.CustomerName, order.CustomerPhone, order.CustomerPreferences)
+		if err != nil {
+			return models.Order{}, fmt.Errorf("error creating customer: %w", err)
+		}
 	}
 
-	err = utils.ValidateOrder(menu, order)
+	// Создаем заказ
+	newOrder, err := s.orderRepo.AddOrder(customerID, order.TotalAmount, order.SpecialInstructions, order.PaymentMethod, order.IsCompleted)
 	if err != nil {
-		return models.Order{}, err
+		return models.Order{}, fmt.Errorf("error creating order: %w", err)
 	}
-	order.ID = 0
-	newOrder, err := s.repository.AddOrder(order)
-	if err != nil {
-		return models.Order{}, err
+
+	// Присваиваем остальные данные
+	newOrder.CustomerName = order.CustomerName
+	newOrder.CustomerPhone = order.CustomerPhone
+	newOrder.CustomerPreferences = order.CustomerPreferences
+	newOrder.TotalAmount = order.TotalAmount
+	newOrder.SpecialInstructions = order.SpecialInstructions
+	newOrder.PaymentMethod = order.PaymentMethod
+	newOrder.IsCompleted = order.IsCompleted
+
+	// Если есть items, то добавляем их
+	if len(order.Items) > 0 {
+		newOrder.Items = order.Items
 	}
+
 	return newOrder, nil
 }
 
