@@ -55,7 +55,7 @@ CREATE TABLE customers (
     phone VARCHAR(50),
     preferences JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ 
 );
 
 CREATE TABLE staff (
@@ -103,7 +103,7 @@ CREATE TABLE orders (
     payment_method payment_method NOT NULL DEFAULT 'cash',
     is_completed BOOLEAN NOT NULL DEFAULT FALSE, -- Быстрый фильтр завершённых заказов
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ 
 );
 
 CREATE TABLE inventory (

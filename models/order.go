@@ -5,6 +5,8 @@ import "time"
 type Order struct {
 	ID                  int         `json:"order_id"`
 	CustomerName        string      `json:"customer_name"`
+	CustomerPhone       string      `json:"customer_phone"`
+	CustomerPreferences string      `json:"customer_preferences"`
 	Items               []OrderItem `json:"items"`
 	Status              string      `json:"status"`
 	TotalAmount         float64     `json:"total_amount"`

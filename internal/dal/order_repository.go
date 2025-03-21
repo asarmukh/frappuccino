@@ -2,6 +2,7 @@ package dal
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"frappuccino/models"
 	"log"
@@ -38,10 +39,19 @@ func (r *OrderPostgresRepository) AddOrder(order models.Order) (models.Order, er
 	).Scan(&customerID)
 
 	if customerErr == sql.ErrNoRows {
+
+		preferencesJSON, err := json.Marshal(order.CustomerPreferences)
+		if err != nil {
+			log.Printf("Error serializing preferences: %v", err)
+			return models.Order{}, err
+		}
+
 		// Клиент не существует, создаем нового
 		customerErr = r.db.QueryRow(
-			"INSERT INTO customers (name) VALUES ($1) RETURNING id",
+			"INSERT INTO customers (name, phone, preferences) VALUES ($1, $2, $3) RETURNING id",
 			order.CustomerName,
+			order.CustomerPhone,
+			preferencesJSON,
 		).Scan(&customerID)
 
 		if customerErr != nil {
@@ -81,6 +91,8 @@ func (r *OrderPostgresRepository) AddOrder(order models.Order) (models.Order, er
 
 	// Присваиваем остальные поля
 	newOrder.CustomerName = order.CustomerName
+	newOrder.CustomerPhone = order.CustomerPhone
+	newOrder.CustomerPreferences = order.CustomerPreferences
 	newOrder.TotalAmount = order.TotalAmount
 	newOrder.SpecialInstructions = order.SpecialInstructions
 	newOrder.PaymentMethod = order.PaymentMethod
