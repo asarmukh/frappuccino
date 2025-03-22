@@ -12,18 +12,9 @@ erDiagram
     staff ||--o{ order_status_history : updates
     staff ||--o{ inventory_transactions : performs
 
-    customers {
-        int id PK
-        varchar name
-        varchar phone
-        jsonb preferences
-        timestamp_tz created_at
-        timestamp_tz updated_at
-    }
-
     orders {
         int id PK
-        int customer_id FK
+        varchar name
         enum order_status
         decimal total_amount
         jsonb special_instructions

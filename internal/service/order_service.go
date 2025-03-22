@@ -16,18 +16,18 @@ type OrderServiceInterface interface {
 }
 
 type OrderService struct {
-	repository       *dal.OrderRepository
+	orderRepo        *dal.OrderRepository
 	menuService      MenuService
 	inventoryService InventoryService
 	customerRepo     dal.CustomerRepository
-	orderRepo        *dal.OrderRepository
 }
 
-func NewOrderService(_repository *dal.OrderRepository, _menuService MenuService, _inventoryService InventoryService) OrderService {
+func NewOrderService(_orderRepo *dal.OrderRepository, _menuService MenuService, _inventoryService InventoryService, _customerRepo dal.CustomerRepository) OrderService {
 	return OrderService{
-		repository:       _repository,
+		orderRepo:        _orderRepo,
 		menuService:      _menuService,
 		inventoryService: _inventoryService,
+		customerRepo:     _customerRepo,
 	}
 }
 
@@ -43,6 +43,10 @@ func (s *OrderService) CreateOrder(order models.Order) (models.Order, error) {
 		if err != nil {
 			return models.Order{}, fmt.Errorf("error creating customer: %w", err)
 		}
+	}
+
+	if order.PaymentMethod == "" {
+		order.PaymentMethod = "cash"
 	}
 
 	// Создаем заказ

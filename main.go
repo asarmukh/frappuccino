@@ -1,27 +1,28 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"flag"
 	"fmt"
-	"log"
-	"net/http"
-	"os"
-	"time"
-
 	"frappuccino/helper"
 	"frappuccino/internal/dal"
 	"frappuccino/internal/handler"
 	"frappuccino/internal/routes"
 	"frappuccino/internal/service"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
 
 	_ "github.com/lib/pq"
 )
 
 func main() {
-	port := flag.Int("port", 8080, "Port number to listen on")
-	help := flag.Bool("help", false, "Show help")
-	dir := flag.String("dir", "data", "Directory path for storing data")
+	port := flag.Int("port", 8080, "Номер порта для прослушивания")
+	help := flag.Bool("help", false, "Показать справку")
+	dir := flag.String("dir", "data", "Путь к директории для хранения данных")
 	flag.Parse()
 
 	if *help {
@@ -52,15 +53,42 @@ func main() {
 		log.Fatal("Error port")
 	}
 
-	// Start Server
+	// Настроим сервер
 	addr := fmt.Sprintf(":%d", *port)
-	log.Printf("🚀 Server start on port: %s\n", addr)
-	if err := http.ListenAndServe(addr, nil); err != nil {
-		log.Fatal("Error start server:", err)
+	server := &http.Server{
+		Addr:         addr,
+		Handler:      nil, // Использует уже настроенные маршруты
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
+
+	// Канал для обработки сигналов завершения работы
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+
+	// Запуск сервера в горутине
+	go func() {
+		log.Printf("🚀 Сервер запущен на порту: %s\n", addr)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal("Ошибка запуска сервера:", err)
+		}
+	}()
+
+	// Ожидаем сигнала для остановки
+	<-stop
+	log.Println("Получен сигнал остановки, завершаем работу...")
+
+	// Корректное завершение работы сервера
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatal("Ошибка при завершении работы сервера:", err)
+	}
+
+	log.Println("Сервер успешно завершил работу")
 }
 
-// Подключение к базе данных с ожиданием её готовности
+// Подключение к базе данных с тайм-аутом
 func connectDB() *sql.DB {
 	connStr := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
@@ -76,19 +104,27 @@ func connectDB() *sql.DB {
 		log.Fatal("❌ Ошибка подключения к БД:", err)
 	}
 
+	// Ожидание доступности базы данных с тайм-аутом
 	waitForDB(db)
-	fmt.Println("✅ Connected to PostgreSQL")
+	fmt.Println("✅ Подключено к PostgreSQL")
 	return db
 }
 
 // Ожидание доступности базы данных
 func waitForDB(db *sql.DB) {
+	timeout := time.After(30 * time.Second) // Тайм-аут через 30 секунд
+	tick := time.Tick(2 * time.Second)
+
 	for {
-		if err := db.Ping(); err == nil {
-			return
+		select {
+		case <-timeout:
+			log.Fatal("❌ Тайм-аут подключения к БД")
+		case <-tick:
+			if err := db.Ping(); err == nil {
+				return
+			}
+			fmt.Println("⏳ Ожидание подключения к БД...")
 		}
-		fmt.Println("⏳ Ожидание подключения к БД...")
-		time.Sleep(2 * time.Second)
 	}
 }
 
@@ -104,7 +140,7 @@ func setupRoutes(orderHandler handler.OrderHandler, menuHandler handler.MenuHand
 	http.HandleFunc("/inventory/", routes.HandleRequestsInventory(inventoryHandler))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "Page not found", http.StatusNotFound)
+		http.Error(w, "Страница не найдена", http.StatusNotFound)
 	})
 }
 

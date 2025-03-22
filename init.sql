@@ -100,7 +100,7 @@ CREATE TABLE orders (
     status order_status NOT NULL DEFAULT 'open',
     total_amount DECIMAL(10, 2) NOT NULL CHECK (total_amount >= 0), -- Для денег
     special_instructions JSONB,
-    payment_method payment_method NOT NULL DEFAULT 'cash',
+    payment_method payment_method DEFAULT 'cash',
     is_completed BOOLEAN NOT NULL DEFAULT FALSE, -- Быстрый фильтр завершённых заказов
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ 

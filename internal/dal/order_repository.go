@@ -22,6 +22,7 @@ func NewOrderPostgresRepository(db *sql.DB) *OrderRepository {
 
 func (r *OrderRepository) AddOrder(customerID int, totalAmount float64, specialInstructions, paymentMethod string, isCompleted bool) (models.Order, error) {
 	var newOrder models.Order
+
 	query := `INSERT INTO orders
               (customer_id, total_amount, special_instructions, payment_method, is_completed)
               VALUES ($1, $2, $3, $4, $5)
@@ -29,10 +30,12 @@ func (r *OrderRepository) AddOrder(customerID int, totalAmount float64, specialI
 
 	err := r.db.QueryRow(query, customerID, totalAmount,
 		sql.NullString{String: specialInstructions, Valid: specialInstructions != ""},
-		paymentMethod, isCompleted).Scan(&newOrder.ID, &newOrder.Status, &newOrder.PaymentMethod, &newOrder.CreatedAt)
+		paymentMethod,
+		isCompleted).Scan(&newOrder.ID, &newOrder.Status, &newOrder.PaymentMethod, &newOrder.CreatedAt)
 	if err != nil {
 		return models.Order{}, fmt.Errorf("error inserting order: %w", err)
 	}
+
 	return newOrder, nil
 }
 
