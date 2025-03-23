@@ -1,14 +1,27 @@
 расширение для ERD диаграммы "Markdown Preview Mermaid Support", чтобы динамически внутри проекта менять ERD.
 
-Примененные типы данных PostgreSQL:
+нужны timestamp?
+orders – "Must include proper timestamps"
+Поля: created_at, updated_at, возможно closed_at (если заказ закрывается).
 
-JSONB:
+order_status_history – "Keeps track of order state changes"
+Поля: changed_at (фиксирует, когда изменился статус заказа).
+
+inventory – "Monitors stock levels, Helps with reordering"
+Поля: updated_at (фиксирует последнее изменение количества).
+
+price_history – "Tracks menu item price changes, Important for historical reporting"
+Поля: changed_at (фиксирует, когда изменялась цена).
+
+inventory_transactions – "Records all inventory changes"
+Поля: transaction_at (фиксирует дату/время изменения запасов).
+
+menu_items – Возможно, для фиксации обновления (updated_at).
+
 
 Когда таблицы клиентов и персонала нужны:
 Программа лояльности (скидки, накопительные баллы, персональные предложения).
-
 Хранение истории покупок клиента (например, если нужно отслеживать предпочтения клиентов или делать аналитику).
-
 Идентификация при онлайн-заказах (если кафе поддерживает доставку и клиент должен быть зарегистрирован).
 
 customers.preferences - для хранения индивидуальных предпочтений клиентов
@@ -16,7 +29,8 @@ orders.special_instructions - для специальных инструкций
 order_items.customizations - для настроек конкретных товаров
 menu_items.customization_options - для возможных опций настройки
 
-
+Примененные типы данных PostgreSQL:
+JSONB
 Массивы (Arrays):
 
 menu_items.categories и menu_items.allergens - категории и аллергены

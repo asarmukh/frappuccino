@@ -55,11 +55,11 @@ CREATE TABLE orders (
 
 CREATE TABLE inventory (
     id SERIAL PRIMARY KEY,
-    ingredient_name VARCHAR(50) NOT NULL UNIQUE, -- Используем имя вместо ID
-    current_quantity DECIMAL NOT NULL CHECK (current_quantity >= 0),
-    cost_per_unit DECIMAL(10, 2) NOT NULL,
-    last_restocked TIMESTAMPTZ,
-    expiry_date TIMESTAMPTZ
+    ingredient_name VARCHAR(50) NOT NULL UNIQUE,
+    quantity NUMERIC NOT NULL CHECK (quantity >= 0),
+    unit VARCHAR(50) NOT NULL,
+    reorder_threshold NUMERIC CHECK (reorder_threshold >= 0), -- Порог перезаказа
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE order_items (

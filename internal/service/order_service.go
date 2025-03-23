@@ -18,16 +18,16 @@ type OrderServiceInterface interface {
 }
 
 type OrderService struct {
-	repository       *dal.OrderRepository
-	menuService      MenuService
-	inventoryService InventoryService
+	repository  *dal.OrderRepository
+	menuService MenuService
+	// inventoryService InventoryService
 }
 
-func NewOrderService(_repository *dal.OrderRepository, _menuService MenuService, _inventoryService InventoryService) OrderService {
+func NewOrderService(_repository *dal.OrderRepository, _menuService MenuService) OrderService {
 	return OrderService{
-		repository:       _repository,
-		menuService:      _menuService,
-		inventoryService: _inventoryService,
+		repository:  _repository,
+		menuService: _menuService,
+		// inventoryService: _inventoryService,
 	}
 }
 

@@ -35,7 +35,7 @@ func main() {
 	db := connectDB()
 	defer db.Close()
 
-	inventoryRepo := dal.NewInventoryRepositoryJSON(*dir)
+	inventoryRepo := dal.NewInventoryPostgresRepository(db)
 	inventoryService := service.NewInventoryService(inventoryRepo)
 	inventoryHandler := handler.NewInventoryHandler(inventoryService)
 
@@ -44,7 +44,7 @@ func main() {
 	menuHandler := handler.NewMenuHandler(menuService)
 
 	orderRepo := dal.NewOrderPostgresRepository(db)
-	orderService := service.NewOrderService(orderRepo, menuService, inventoryService)
+	orderService := service.NewOrderService(orderRepo, menuService)
 	orderHandler := handler.NewOrderHandler(orderService)
 
 	setupRoutes(orderHandler, menuHandler, inventoryHandler)
@@ -68,7 +68,7 @@ func main() {
 
 	// Запуск сервера в горутине
 	go func() {
-		log.Printf("🚀 Сервер запущен на порту: %s\n", addr)
+		log.Printf("🚀 The server is running on the port: %s\n", addr)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal("Ошибка запуска сервера:", err)
 		}
@@ -101,12 +101,12 @@ func connectDB() *sql.DB {
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		log.Fatal("❌ Ошибка подключения к БД:", err)
+		log.Fatal("❌ Database connection error:", err)
 	}
 
 	// Ожидание доступности базы данных с тайм-аутом
 	waitForDB(db)
-	fmt.Println("✅ Подключено к PostgreSQL")
+	fmt.Println("✅ Connected to PostgreSQL")
 	return db
 }
 
@@ -128,19 +128,25 @@ func waitForDB(db *sql.DB) {
 	}
 }
 
-// Функция для установки маршрутов
 func setupRoutes(orderHandler handler.OrderHandler, menuHandler handler.MenuHandler, inventoryHandler handler.InventoryHandler) {
-	http.HandleFunc("/orders", routes.HandleRequestsOrders(orderHandler))
-	http.HandleFunc("/orders/", routes.HandleRequestsOrders(orderHandler))
+	http.HandleFunc("/orders", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("🔥 Request processed in /orders")
+		routes.HandleRequestsOrders(orderHandler)(w, r)
+	})
 
-	http.HandleFunc("/menu", routes.HandleMenu(menuHandler))
-	http.HandleFunc("/menu/", routes.HandleMenu(menuHandler))
+	http.HandleFunc("/menu", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("🔥 Request processed in /menu")
+		routes.HandleMenu(menuHandler)(w, r)
+	})
 
-	http.HandleFunc("/inventory", routes.HandleRequestsInventory(inventoryHandler))
-	http.HandleFunc("/inventory/", routes.HandleRequestsInventory(inventoryHandler))
+	http.HandleFunc("/inventory", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("🔥 Request processed in /inventory")
+		routes.HandleRequestsInventory(inventoryHandler)(w, r)
+	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "Страница не найдена", http.StatusNotFound)
+		log.Println("🔥 Request for an unknown route:", r.URL.Path)
+		http.Error(w, "Page not found", http.StatusNotFound)
 	})
 }
 

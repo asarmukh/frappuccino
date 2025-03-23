@@ -74,8 +74,7 @@ erDiagram
         varchar name
         decimal current_quantity
         decimal cost_per_unit
-        timestamp_tz last_restocked
-        timestamp_tz expiry_date
+        timestamp_tz updated_at
     }
 
     inventory_transactions {
