@@ -3,10 +3,9 @@ package dal
 import (
 	"encoding/json"
 	"fmt"
+	"frappuccino/models"
 	"os"
 	"path/filepath"
-
-	"frappuccino/models"
 )
 
 type MenuRepositoryInterface interface {

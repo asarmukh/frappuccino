@@ -41,23 +41,6 @@ BEGIN
     END IF;
 END $$;
 
-DO $$ 
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_method') THEN
-        CREATE TYPE payment_method AS ENUM ('cash', 'credit_card', 'debit_card', 'mobile_payment', 'bank_transfer', 'voucher');
-    END IF;
-END $$;
-
-
-CREATE TABLE customers (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(50) NOT NULL,
-    phone VARCHAR(50),
-    preferences JSONB,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ 
-);
-
 CREATE TABLE staff (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
@@ -93,14 +76,12 @@ CREATE TABLE menu_items (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-
 CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
-    customer_id INT REFERENCES customers(id) ON DELETE SET NULL,
+    name VARCHAR(50) NOT NULL,
     status order_status NOT NULL DEFAULT 'open',
     total_amount DECIMAL(10, 2) NOT NULL CHECK (total_amount >= 0), -- Для денег
     special_instructions JSONB,
-    payment_method payment_method DEFAULT 'cash',
     is_completed BOOLEAN NOT NULL DEFAULT FALSE, -- Быстрый фильтр завершённых заказов
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ 

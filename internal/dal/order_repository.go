@@ -2,8 +2,9 @@ package dal
 
 import (
 	"database/sql"
-	"fmt"
+	"encoding/json"
 	"frappuccino/models"
+	"log"
 )
 
 type OrderRepositoryInterface interface {
@@ -20,20 +21,28 @@ func NewOrderPostgresRepository(db *sql.DB) *OrderRepository {
 	return &OrderRepository{db: db}
 }
 
-func (r *OrderRepository) AddOrder(customerID int, totalAmount float64, specialInstructions, paymentMethod string, isCompleted bool) (models.Order, error) {
+// Method for adding a new order to the database
+func (r *OrderRepository) AddOrder(order models.Order) (models.Order, error) {
 	var newOrder models.Order
-
 	query := `INSERT INTO orders
-              (customer_id, total_amount, special_instructions, payment_method, is_completed)
-              VALUES ($1, $2, $3, $4, $5)
-              RETURNING id, status, payment_method, created_at`
+			(name, total_amount, special_instructions)
+			VALUES ($1, $2, $3)
+			RETURNING id, status, total_amount, created_at`
 
-	err := r.db.QueryRow(query, customerID, totalAmount,
-		sql.NullString{String: specialInstructions, Valid: specialInstructions != ""},
-		paymentMethod,
-		isCompleted).Scan(&newOrder.ID, &newOrder.Status, &newOrder.PaymentMethod, &newOrder.CreatedAt)
+	specialInstrustionByte, err1 := json.Marshal(order.SpecialInstructions)
+	if err1 != nil {
+		return models.Order{}, err1
+	}
+
+	err := r.db.QueryRow(
+		query,
+		order.CustomerName,
+		order.TotalAmount,
+		specialInstrustionByte,
+	).Scan(&newOrder.ID, &newOrder.Status, &newOrder.TotalAmount, &newOrder.CreatedAt)
 	if err != nil {
-		return models.Order{}, fmt.Errorf("error inserting order: %w", err)
+		log.Printf("Error inserting order: %v", err)
+		return models.Order{}, err
 	}
 
 	return newOrder, nil

@@ -1,6 +1,5 @@
 ```mermaid
 erDiagram
-    customers ||--o{ orders : places
     orders ||--|{ order_items : contains
     orders ||--|{ order_status_history : tracks
     menu_items ||--o{ order_items : "ordered as"
@@ -18,7 +17,6 @@ erDiagram
         enum order_status
         decimal total_amount
         jsonb special_instructions
-        varchar payment_method
         boolean is_completed
         timestamp_tz created_at
         timestamp_tz updated_at
