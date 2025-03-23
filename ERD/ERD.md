@@ -4,12 +4,8 @@ erDiagram
     orders ||--|{ order_status_history : tracks
     menu_items ||--o{ order_items : "ordered as"
     menu_items ||--|{ menu_item_ingredients : requires
-    ingredients ||--o{ menu_item_ingredients : "used in"
     inventory ||--|{ inventory_transactions : logs
-    ingredients ||--|| inventory : tracks
     menu_items ||--o{ price_history : records
-    staff ||--o{ order_status_history : updates
-    staff ||--o{ inventory_transactions : performs
 
     orders {
         int id PK
@@ -66,26 +62,15 @@ erDiagram
 
     menu_item_ingredients {
         int menu_item_id PK, FK
-        int ingredient_id PK, FK
         decimal quantity
         varchar unit
         boolean is_optional
         varchar[] substitutes
     }
 
-    ingredients {
-        int id PK
-        varchar name
-        text description
-        varchar measurement_unit
-        decimal minimum_stock_level
-        timestamp_tz created_at
-        timestamp_tz updated_at
-    }
-
     inventory {
         int id PK
-        int ingredient_id FK
+        varchar name
         decimal current_quantity
         decimal cost_per_unit
         timestamp_tz last_restocked
@@ -95,20 +80,8 @@ erDiagram
     inventory_transactions {
         int id PK
         int inventory_id FK
-        int staff_id FK
         enum transaction_type
         decimal quantity
         text notes
         timestamp_tz created_at
-    }
-
-    staff {
-        int id PK
-        varchar name
-        varchar email
-        varchar phone
-        enum role
-        timestamp_tz[] schedule
-        timestamp_tz hire_date
-        boolean is_active
     }
