@@ -1,4 +1,3 @@
-```mermaid
 erDiagram
     orders ||--|{ order_items : contains
     orders ||--|{ order_status_history : tracks
@@ -6,6 +5,7 @@ erDiagram
     menu_items ||--|{ menu_item_ingredients : requires
     inventory ||--|{ inventory_transactions : logs
     menu_items ||--o{ price_history : records
+    inventory ||--o{ menu_item_ingredients : provides
 
     orders {
         int id PK
@@ -62,6 +62,7 @@ erDiagram
 
     menu_item_ingredients {
         int menu_item_id PK, FK
+        int inventory_id PK, FK
         decimal quantity
         varchar unit
         boolean is_optional
