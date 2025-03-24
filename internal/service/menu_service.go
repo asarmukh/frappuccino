@@ -3,14 +3,16 @@ package service
 import (
 	"frappuccino/internal/dal"
 	"frappuccino/models"
+	"frappuccino/utils"
+	"log"
 )
 
 type MenuServiceInterface interface {
 	CreateMenuItem(menuItem models.MenuItem) (models.MenuItem, error)
-	GetAllMenuItems() ([]models.MenuItem, error)
-	GetMenuItemByID(id string) (models.MenuItem, error)
-	DeleteMenuItemByID(id string) error
-	UpdateMenu(id string, changeMenu models.MenuItem) (models.MenuItem, error)
+	// GetAllMenuItems() ([]models.MenuItem, error)
+	// GetMenuItemByID(id string) (models.MenuItem, error)
+	// DeleteMenuItemByID(id string) error
+	// UpdateMenu(id string, changeMenu models.MenuItem) (models.MenuItem, error)
 }
 
 type MenuService struct {
@@ -25,43 +27,45 @@ func NewMenuService(_repository dal.MenuRepositoryInterface, _inventoryService I
 	}
 }
 
-// func (m MenuService) CreateMenuItem(menuItem models.MenuItem) (models.MenuItem, error) {
-// 	words := strings.Fields(menuItem.Name)
-// 	var newID string
+func (s MenuService) CreateMenuItem(menuItem models.MenuItem) (models.MenuItem, error) {
+	if err := utils.IsValidName(menuItem.Name); err != nil {
+		return models.MenuItem{}, err
+	}
 
-// 	for i := 0; i < len(words); i++ {
-// 		if i == len(words)-1 {
-// 			newID = strings.ToLower(words[i]) // последний - ID
-// 		}
-// 	}
+	if err := utils.ValidateDescription(menuItem.Description); err != nil {
+		return models.MenuItem{}, err
+	}
 
-// 	menu, err := m.repository.LoadMenuItems()
-// 	if err != nil {
-// 		return models.MenuItem{}, err
-// 	}
+	if err := utils.ValidatePrice(menuItem.Price); err != nil {
+		return models.MenuItem{}, err
+	}
 
-// 	for _, item := range menu {
-// 		if item.Name == menuItem.Name || item.Description == menuItem.Description {
-// 			return models.MenuItem{}, fmt.Errorf("invalid requests body: name or description exeist in menu")
-// 		}
-// 	}
+	if err := utils.ValidateIngredients(menuItem.Ingredients); err != nil {
+		return models.MenuItem{}, err
+	}
+	//1)обращаемся к репозиторию
+	newMenuItem, err := s.repository.AddMenuItem(menuItem)
+	if err != nil {
+		return models.MenuItem{}, err
+	}
+	// 2) А там : проверить существует ли такой продукт в бд, а также описание и тд,ну для этого есть юникью там и т.д.
+	// for _, item := range menu {
+	// 	if item.Name == menuItem.Name || item.Description == menuItem.Description {
+	// 		return models.MenuItem{}, fmt.Errorf("invalid requests body: name or description exeist in menu")
+	// 	}
+	// }
+	//3)искать айди в бд продукта
+	// if err := utils.ValidateID(menuItem.ID); err != nil {
+	// 	return models.MenuItem{}, fmt.Errorf("invalid product ID: %v", err)
+	// }
+	//4)искать айди в бд ингридиентов инвентаря
+	// if err := utils.ValidateMenuItem(menuItem); err != nil {
+	// 	return models.MenuItem{}, err
+	// }
 
-// 	menuItem.ID = newID
-
-// 	if err := utils.ValidateID(menuItem.ID); err != nil {
-// 		return models.MenuItem{}, fmt.Errorf("invalid product ID: %v", err)
-// 	}
-
-// 	if err := utils.ValidateMenuItem(menuItem); err != nil {
-// 		return models.MenuItem{}, err
-// 	}
-
-// 	if err := m.repository.AddMenuItem(menuItem); err != nil {
-// 		return models.MenuItem{}, err
-// 	}
-// 	log.Printf("menu item added: %s", menuItem.ID)
-// 	return menuItem, nil
-// }
+	log.Printf("menu item added: %s", newMenuItem.ID)
+	return newMenuItem, nil
+}
 
 // func (m MenuService) GetAllMenuItems() ([]models.MenuItem, error) {
 // 	items, err := m.repository.LoadMenuItems()

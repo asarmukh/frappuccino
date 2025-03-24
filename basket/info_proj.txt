@@ -1,0 +1,40 @@
+(ARRAY) Для кофейни примеры категорий могут включать:
+"Hot Drinks"
+"Cold Drinks"
+"Espresso Drinks"
+"Tea"
+"Pastries"
+"Breakfast"
+"Sandwiches"
+"Desserts"
+"Seasonal"
+"Specials"
+
+(jsonb) Специальные инструкции:
+{
+    "id": 1,
+    "name": "Order #1",
+    "status": "open",
+    "total_amount": 15.99,
+    "special_instructions": {
+        "temperature": "extra hot",
+        "notes": "no sugar"
+    },
+    "is_completed": false,
+    "created_at": "2025-03-23T23:00:00Z",
+    "updated_at": null
+}
+    Ответ:
+{
+    "name": "Order #1",
+    "status": "open",
+    "total_amount": 15.99,
+    "special_instructions": {
+        "temperature": "extra hot",
+        "notes": "no sugar"
+    },
+    "is_completed": false
+}
+
+menu_item_ingredients в эту таблицу указываешь что нам нужно например при создании меню?
+Ответ: menu_item_ingredients заполняется при создании меню и указывает, какие ингредиенты нужны для каждой позиции меню.

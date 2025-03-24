@@ -20,17 +20,14 @@ import (
 )
 
 func main() {
-	port := flag.Int("port", 8080, "Номер порта для прослушивания")
-	help := flag.Bool("help", false, "Показать справку")
-	dir := flag.String("dir", "data", "Путь к директории для хранения данных")
+	port := flag.Int("port", 8080, "Listening port number")
+	help := flag.Bool("help", false, "Show help")
 	flag.Parse()
 
 	if *help {
 		helper.PrintUsage()
 		return
 	}
-
-	helper.CreateNewDir(*dir)
 
 	db := connectDB()
 	defer db.Close()
@@ -39,7 +36,7 @@ func main() {
 	inventoryService := service.NewInventoryService(inventoryRepo)
 	inventoryHandler := handler.NewInventoryHandler(inventoryService)
 
-	menuRepo := dal.NewMenuRepositoryJSON(*dir)
+	menuRepo := dal.NewMenuRepository(db)
 	menuService := service.NewMenuService(menuRepo, inventoryService)
 	menuHandler := handler.NewMenuHandler(menuService)
 

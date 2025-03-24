@@ -30,14 +30,11 @@ END $$;
 
 CREATE TABLE menu_items (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(50) NOT NULL,
+    name VARCHAR(50) NOT NULL UNIQUE,
     description TEXT,
-    base_price DECIMAL(10, 2) NOT NULL CHECK (base_price > 0),
+    price DECIMAL(10, 2) NOT NULL CHECK (price > 0),
     categories VARCHAR[],
-    allergens VARCHAR[],
-    size size,
-    available BOOLEAN NOT NULL DEFAULT TRUE,
-    customization_option JSONB,
+    -- available BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -56,9 +53,9 @@ CREATE TABLE orders (
 CREATE TABLE inventory (
     id SERIAL PRIMARY KEY,
     ingredient_name VARCHAR(50) NOT NULL UNIQUE,
-    quantity NUMERIC NOT NULL CHECK (quantity >= 0),
+    quantity DECIMAL NOT NULL CHECK (quantity >= 0),
     unit VARCHAR(50) NOT NULL,
-    reorder_threshold NUMERIC CHECK (reorder_threshold >= 0), -- Порог перезаказа
+    reorder_threshold DECIMAL CHECK (reorder_threshold >= 0), -- Порог перезаказа
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -80,15 +77,11 @@ CREATE TABLE order_status_history (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Исправленная таблица menu_item_ingredients
 CREATE TABLE menu_item_ingredients (
-    menu_item_id INT REFERENCES menu_items(id) ON DELETE CASCADE,
-    ingredient_name VARCHAR(50) NOT NULL, -- Вместо ingredient_id
-    quantity DECIMAL NOT NULL CHECK (quantity > 0),
-    unit VARCHAR(50) NOT NULL,
-    is_optional BOOLEAN NOT NULL DEFAULT FALSE,
-    substitutes VARCHAR[],
-    PRIMARY KEY (menu_item_id, ingredient_name) -- Используем имя ингредиента как часть ключа
+    menu_item_id INT NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,
+    ingredient_id INT NOT NULL REFERENCES inventory(id) ON DELETE CASCADE,
+    quantity DECIMAL NOT NULL CHECK (quantity > 0)
+    PRIMARY KEY (menu_item_id, ingredient_id)
 );
 
 CREATE TABLE inventory_transaction (

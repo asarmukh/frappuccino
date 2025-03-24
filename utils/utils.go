@@ -89,14 +89,14 @@ func ValidateIngredients(ingredients []models.MenuItemIngredient) error {
 		return fmt.Errorf("too many ingredients (maximum 50)")
 	}
 
-	seenIngredients := make(map[string]bool)
+	seenIngredients := make(map[int]bool)
 	for _, ingredient := range ingredients {
 		if err := ValidateIngredient(ingredient); err != nil {
 			return err
 		}
 
 		if seenIngredients[ingredient.IngredientID] {
-			return fmt.Errorf("duplicate ingredient ID: %s", ingredient.IngredientID)
+			return fmt.Errorf("duplicate ingredient ID: %d", ingredient.IngredientID)
 		}
 		seenIngredients[ingredient.IngredientID] = true
 	}
@@ -105,23 +105,15 @@ func ValidateIngredients(ingredients []models.MenuItemIngredient) error {
 }
 
 func ValidateIngredient(ingredient models.MenuItemIngredient) error {
-	if err := ValidateID(ingredient.IngredientID); err != nil {
-		return fmt.Errorf("invalid ingredient ID: %v", err)
+	if ingredient.IngredientID <= 0 {
+		return fmt.Errorf("invalid ingredient ID: %d", ingredient.IngredientID)
 	}
 
-	if err := ValidateQuantity(ingredient.Quantity); err != nil {
-		return fmt.Errorf("invalid quantity for ingredient %s: %v", ingredient.IngredientID, err)
-	}
-
-	return nil
-}
-
-func ValidateQuantity(quantity float64) error {
-	if quantity <= 0 {
+	if ingredient.Quantity <= 0 {
 		return fmt.Errorf("quantity must be greater than zero")
 	}
 
-	if quantity > 1000 {
+	if ingredient.Quantity > 1000 {
 		return fmt.Errorf("quantity is too high (maximum 1000)")
 	}
 

@@ -1,9 +1,14 @@
 package handler
 
 import (
+	"encoding/json"
+	"fmt"
+	"log/slog"
 	"net/http"
 
 	"frappuccino/internal/service"
+	"frappuccino/models"
+	"frappuccino/utils"
 )
 
 type MenuHandlerInterface interface {
@@ -22,38 +27,38 @@ func NewMenuHandler(_menuService service.MenuService) MenuHandler {
 	return MenuHandler{menuService: _menuService}
 }
 
-// func (m MenuHandler) HandleCreateMenuItem(w http.ResponseWriter, r *http.Request) {
-// 	slog.Info("Received request to add a new menu item")
+func (m MenuHandler) HandleCreateMenuItem(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Received request to add a new menu item")
 
-// 	var NewMenuItem models.MenuItem
-// 	if err := json.NewDecoder(r.Body).Decode(&NewMenuItem); err != nil {
-// 		slog.Warn("Invalid JSON format", "error", err)
-// 		utils.ErrorInJSON(w, http.StatusBadRequest, fmt.Errorf("invalid JSON format: %v", err))
-// 		return
-// 	}
+	var NewMenuItem models.MenuItem
+	if err := json.NewDecoder(r.Body).Decode(&NewMenuItem); err != nil {
+		slog.Warn("Invalid JSON format", "error", err)
+		utils.ErrorInJSON(w, http.StatusBadRequest, fmt.Errorf("invalid JSON format: %v", err))
+		return
+	}
 
-// 	if NewMenuItem.ID != "" {
-// 		slog.Warn("invalid request body")
-// 		utils.ErrorInJSON(w, http.StatusBadRequest, fmt.Errorf("invalid request body"))
-// 		return
-// 	}
+	if NewMenuItem.ID != 0 { // 0 по умолчанию для int, чтобы в сервисы не заходить
+		slog.Warn("invalid request body")
+		utils.ErrorInJSON(w, http.StatusBadRequest, fmt.Errorf("invalid request body"))
+		return
+	}
 
-// 	if err := utils.ValidateMenuItem(NewMenuItem); err != nil {
-// 		slog.Warn("Menu item validation failed", "error", err)
-// 		utils.ErrorInJSON(w, http.StatusBadRequest, err)
-// 		return
-// 	}
+	if err := utils.ValidateMenuItem(NewMenuItem); err != nil {
+		slog.Warn("Menu item validation failed", "error", err)
+		utils.ErrorInJSON(w, http.StatusBadRequest, err)
+		return
+	}
 
-// 	menu, err := m.menuService.CreateMenuItem(NewMenuItem)
-// 	if err != nil {
-// 		slog.Error("Failed to add menu item", "error", err)
-// 		utils.ErrorInJSON(w, http.StatusInternalServerError, err)
-// 		return
-// 	}
+	menu, err := m.menuService.CreateMenuItem(NewMenuItem)
+	if err != nil {
+		slog.Error("Failed to add menu item", "error", err)
+		utils.ErrorInJSON(w, 400, err)
+		return
+	}
 
-// 	slog.Info("Menu item added successfully", "menuID", menu.ID)
-// 	utils.ResponseInJSON(w, 201, menu)
-// }
+	slog.Info("Menu item added successfully", "menuID", menu.ID)
+	utils.ResponseInJSON(w, 201, menu)
+}
 
 // func (m MenuHandler) HandleGetAllMenuItems(w http.ResponseWriter, r *http.Request) {
 // 	slog.Info("Received request to get all menu items")

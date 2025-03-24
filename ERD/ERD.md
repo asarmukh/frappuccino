@@ -72,8 +72,9 @@ erDiagram
     inventory {
         int id PK
         varchar name
-        decimal current_quantity
-        decimal cost_per_unit
+        decimal quantity
+        varchar unit
+        decimal reorder_threshold
         timestamp_tz updated_at
     }
 
