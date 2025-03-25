@@ -51,7 +51,7 @@ CREATE TABLE orders (
 );
 
 CREATE TABLE inventory (
-    id SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY AUTOINCREMENT,
     ingredient_name VARCHAR(50) NOT NULL UNIQUE,
     quantity DECIMAL NOT NULL CHECK (quantity >= 0),
     unit VARCHAR(50) NOT NULL,

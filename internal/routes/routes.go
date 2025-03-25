@@ -3,6 +3,7 @@ package routes
 import (
 	"frappuccino/internal/handler"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -28,9 +29,35 @@ import (
 
 func HandleRequestsInventory(inventoryHandler handler.InventoryHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		path := strings.Trim(r.URL.Path, "/")
+		parts := strings.SplitN(path, "/", 3)
 		switch r.Method {
 		case http.MethodPost:
 			inventoryHandler.HandleCreateInventory(w, r)
+		case http.MethodGet:
+			if len(parts) == 1 {
+				inventoryHandler.HandleGetAllInventory(w, r)
+			} else if len(parts) == 2 {
+				id, err := strconv.Atoi(parts[1])
+				if err != nil {
+					http.Error(w, "Invalid inventory ID", http.StatusBadRequest)
+					return
+				}
+				inventoryHandler.HandleGetInventoryById(w, r, id)
+			} else {
+				http.Error(w, "Not Found", http.StatusNotFound)
+			}
+		case http.MethodDelete:
+			if len(parts) == 2 {
+				id, err := strconv.Atoi(parts[1])
+				if err != nil {
+					http.Error(w, "Invalid inventory ID", http.StatusBadRequest)
+					return
+				}
+				inventoryHandler.HandleDeleteInventoryItem(w, r, id)
+			} else {
+				http.Error(w, "Not Found", http.StatusNotFound)
+			}
 		default:
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		}

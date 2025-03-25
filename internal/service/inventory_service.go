@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"frappuccino/internal/dal"
 	"frappuccino/models"
 	"frappuccino/utils"
@@ -46,54 +47,54 @@ func (s InventoryService) CreateInventory(inventory models.InventoryItem) (model
 	return newInventory, nil
 }
 
-// func (s InventoryService) GetAllInventory() ([]models.InventoryItem, error) {
-// 	inventrories, err := s.repository.LoadInventory()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return inventrories, nil
-// }
+func (s InventoryService) GetAllInventory() ([]models.InventoryItem, error) {
+	inventrories, err := s.repository.LoadInventory()
+	if err != nil {
+		return nil, err
+	}
+	return inventrories, nil
+}
 
-// func (s InventoryService) GetInventoryByID(id string) (models.InventoryItem, error) {
-// 	inventory, err := s.repository.LoadInventory()
-// 	if err != nil {
-// 		return models.InventoryItem{}, errors.New("get all inventory")
-// 	}
+func (s InventoryService) GetInventoryByID(id int) (models.InventoryItem, error) {
+	inventory, err := s.repository.LoadInventory()
+	if err != nil {
+		return models.InventoryItem{}, errors.New("get all inventory")
+	}
 
-// 	if len(inventory) > 0 {
-// 		for i := 0; i < len(inventory); i++ {
-// 			if inventory[i].IngredientID == id {
-// 				return inventory[i], nil
-// 			}
-// 		}
-// 	} else {
-// 		return models.InventoryItem{}, errors.New("inventory is empty")
-// 	}
-// 	return models.InventoryItem{}, errors.New("invalid product ID in inventory items")
-// }
+	if len(inventory) > 0 {
+		for i := 0; i < len(inventory); i++ {
+			if inventory[i].IngredientID == id {
+				return inventory[i], nil
+			}
+		}
+	} else {
+		return models.InventoryItem{}, errors.New("inventory is empty")
+	}
+	return models.InventoryItem{}, errors.New("invalid product ID in inventory items")
+}
 
-// func (h InventoryService) DeleteInventoryItemByID(id string) error {
-// 	inventoryItems, err := h.repository.LoadInventory()
-// 	if err != nil {
-// 		return err
-// 	}
+func (h InventoryService) DeleteInventoryItemByID(id int) error {
+	inventoryItems, err := h.repository.LoadInventory()
+	if err != nil {
+		return err
+	}
 
-// 	indexToDelete := -1
-// 	for i, item := range inventoryItems {
-// 		if item.IngredientID == id {
-// 			indexToDelete = i
-// 			break
-// 		}
-// 	}
+	indexToDelete := -1
+	for i, item := range inventoryItems {
+		if item.IngredientID == id {
+			indexToDelete = i
+			break
+		}
+	}
 
-// 	if indexToDelete == -1 {
-// 		return fmt.Errorf("inventory item with ID %s not found", id)
-// 	}
+	if indexToDelete == -1 {
+		return fmt.Errorf("inventory item with ID %d not found", id)
+	}
 
-// 	inventoryItems = append(inventoryItems[:indexToDelete], inventoryItems[indexToDelete+1:]...)
+	inventoryItems = append(inventoryItems[:indexToDelete], inventoryItems[indexToDelete+1:]...)
 
-// 	return h.repository.SaveInventory(inventoryItems)
-// }
+	return h.repository.SaveInventory(inventoryItems)
+}
 
 // func (h InventoryService) UpdateInventoryItem(inventoryItemID string, changedInventoryItem models.InventoryItem) (models.InventoryItem, error) {
 // 	if changedInventoryItem.Name == "" || changedInventoryItem.Quantity < 0 || changedInventoryItem.Unit == "" {

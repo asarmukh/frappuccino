@@ -3,12 +3,11 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
-	"net/http"
-
 	"frappuccino/internal/service"
 	"frappuccino/models"
 	"frappuccino/utils"
+	"log/slog"
+	"net/http"
 )
 
 type InventoryHandlerInterface interface {
@@ -48,46 +47,47 @@ func (h InventoryHandler) HandleCreateInventory(w http.ResponseWriter, r *http.R
 	}
 }
 
-// func (h InventoryHandler) HandleGetAllInventory(w http.ResponseWriter, r *http.Request) {
-// 	slog.Info("Received request to get all inventory")
+func (h InventoryHandler) HandleGetAllInventory(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Received request to get all inventory")
 
-// 	inventories, err := h.inventoryService.GetAllInventory()
-// 	if err != nil {
-// 		slog.Error("Failed to retrieve inventory", "error", err)
-// 		utils.ErrorInJSON(w, http.StatusNotFound, err)
-// 	}
+	inventories, err := h.inventoryService.GetAllInventory()
+	if err != nil {
+		slog.Error("Failed to retrieve inventory", "error", err)
+		utils.ErrorInJSON(w, http.StatusNotFound, fmt.Errorf("failed to retrieve inventory: %v", err))
+		return
+	}
 
-// 	slog.Info("Successfully retrieved all inventory", "count", len(inventories))
-// 	utils.ResponseInJSON(w, 200, inventories)
-// }
+	slog.Info("Successfully retrieved all inventory", "count", len(inventories))
+	utils.ResponseInJSON(w, http.StatusOK, inventories)
+}
 
-// func (h InventoryHandler) HandleGetInventoryById(w http.ResponseWriter, r *http.Request, id string) {
-// 	slog.Info("Received request to get inventory", "inventoryID", id)
+func (h InventoryHandler) HandleGetInventoryById(w http.ResponseWriter, r *http.Request, id int) {
+	slog.Info("Received request to get inventory", "inventoryID", id)
 
-// 	inventory, err := h.inventoryService.GetInventoryByID(id)
-// 	if err != nil {
-// 		slog.Warn("inventory not found", "inventoryID", id, "error", err)
-// 		utils.ErrorInJSON(w, 404, err)
-// 		return
-// 	}
+	inventory, err := h.inventoryService.GetInventoryByID(id)
+	if err != nil {
+		slog.Warn("inventory not found", "inventoryID", id, "error", err)
+		utils.ErrorInJSON(w, 404, err)
+		return
+	}
 
-// 	slog.Info("Successfully retrieved inventory", "inventoryID", inventory.IngredientID)
-// 	utils.ResponseInJSON(w, 200, inventory)
-// }
+	slog.Info("Successfully retrieved inventory", "inventoryID", inventory.IngredientID)
+	utils.ResponseInJSON(w, 200, inventory)
+}
 
-// func (h InventoryHandler) HandleDeleteInventoryItem(w http.ResponseWriter, r *http.Request, inventoryItemID string) {
-// 	slog.Info("Received request to delete inventory", "inevntoryID", inventoryItemID)
+func (h InventoryHandler) HandleDeleteInventoryItem(w http.ResponseWriter, r *http.Request, inventoryItemID int) {
+	slog.Info("Received request to delete inventory", "inevntoryID", inventoryItemID)
 
-// 	err := h.inventoryService.DeleteInventoryItemByID(inventoryItemID)
-// 	if err != nil {
-// 		slog.Warn("Failed to delete inventory", "inventoryID", inventoryItemID, "error", err)
-// 		utils.ErrorInJSON(w, http.StatusNotFound, err)
-// 		return
-// 	}
+	err := h.inventoryService.DeleteInventoryItemByID(inventoryItemID)
+	if err != nil {
+		slog.Warn("Failed to delete inventory", "inventoryID", inventoryItemID, "error", err)
+		utils.ErrorInJSON(w, http.StatusNotFound, err)
+		return
+	}
 
-// 	slog.Info("inventory deleted successfully", "inventoryID", inventoryItemID)
-// 	w.WriteHeader(http.StatusNoContent)
-// }
+	slog.Info("inventory deleted successfully", "inventoryID", inventoryItemID)
+	w.WriteHeader(http.StatusNoContent)
+}
 
 // func (h InventoryHandler) HandleUpdateInventoryItem(w http.ResponseWriter, r *http.Request, inventoryItemID string) {
 // 	slog.Info("Received request to update inventory", "inventoryID", inventoryItemID)
