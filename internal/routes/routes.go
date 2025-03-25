@@ -1,9 +1,9 @@
 package routes
 
 import (
-	"net/http"
-
 	"frappuccino/internal/handler"
+	"net/http"
+	"strings"
 )
 
 // func HandleRequestsReports(reportHandler handler.ReportHandler) http.HandlerFunc {
@@ -28,7 +28,6 @@ import (
 
 func HandleRequestsInventory(inventoryHandler handler.InventoryHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		switch r.Method {
 		case http.MethodPost:
 			inventoryHandler.HandleCreateInventory(w, r)
@@ -86,16 +85,17 @@ func HandleRequestsOrders(orderHandler handler.OrderHandler) http.HandlerFunc {
 
 func HandleMenu(menuHandler handler.MenuHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// path := strings.Trim(r.URL.Path, "/")
-		// parts := strings.SplitN(path, "/", 2)
+		path := strings.Trim(r.URL.Path, "/")
+		parts := strings.SplitN(path, "/", 2)
 
-		// switch r.Method {
-		// case http.MethodPost:
-		// 	if len(parts) == 1 {
-		// 		menuHandler.HandleCreateMenuItem(w, r)
-		// 	} else {
-		// 		http.Error(w, "Not Found", http.StatusNotFound)
-		// 	}
+		switch r.Method {
+		case http.MethodPost:
+			if len(parts) == 1 {
+				menuHandler.HandleCreateMenuItem(w, r)
+			} else {
+				http.Error(w, "Not Found", http.StatusNotFound)
+			}
+		}
 		// case http.MethodGet:
 		// 	if len(parts) == 1 {
 		// 		menuHandler.HandleGetAllMenuItems(w, r)

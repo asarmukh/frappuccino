@@ -15,6 +15,6 @@ type Order struct {
 }
 
 type OrderItem struct {
-	ProductID string  `json:"product_id"` // тип поменять на float64
+	ProductID int     `json:"product_id"`
 	Quantity  float64 `json:"quantity"`
 }

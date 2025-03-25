@@ -80,7 +80,7 @@ CREATE TABLE order_status_history (
 CREATE TABLE menu_item_ingredients (
     menu_item_id INT NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,
     ingredient_id INT NOT NULL REFERENCES inventory(id) ON DELETE CASCADE,
-    quantity DECIMAL NOT NULL CHECK (quantity > 0)
+    quantity DECIMAL NOT NULL CHECK (quantity > 0),
     PRIMARY KEY (menu_item_id, ingredient_id)
 );
 
