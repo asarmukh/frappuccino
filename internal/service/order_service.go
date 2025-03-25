@@ -6,6 +6,7 @@ import (
 	"frappuccino/internal/dal"
 	"frappuccino/models"
 	"frappuccino/utils"
+	"log"
 )
 
 type OrderServiceInterface interface {
@@ -41,30 +42,22 @@ func (s *OrderService) CreateOrder(order models.Order) (models.Order, error) {
 		return models.Order{}, errors.New("total amount cannot be negative")
 	}
 
-	menu, err := s.menuService.repository.LoadMenuItems()
-	if err != nil {
-		return models.Order{}, err
-	}
+	// menu, err := s.menuService.repository.LoadMenuItems()
+	// if err != nil {
+	// 	return models.Order{}, err
+	// }
 
-	err = utils.ValidateOrder(menu, order)
-	if err != nil {
-		return models.Order{}, err
-	}
+	// err = utils.ValidateOrder(menu, order)
+	// if err != nil {
+	// 	return models.Order{}, err
+	// }
 
 	newOrder, err := s.repository.AddOrder(order)
 	if err != nil {
 		return models.Order{}, fmt.Errorf("error creating order: %w", err)
 	}
 
-	newOrder.CustomerName = order.CustomerName
-	newOrder.TotalAmount = order.TotalAmount
-	newOrder.IsCompleted = order.IsCompleted
-
-	// Если есть items, то добавляем их
-	if len(order.Items) > 0 {
-		newOrder.Items = order.Items
-	}
-
+	log.Printf("order added: %d", newOrder.ID)
 	return newOrder, nil
 }
 

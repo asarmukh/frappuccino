@@ -2,12 +2,11 @@ package service
 
 import (
 	"errors"
-	"log"
-	"strings"
-
 	"frappuccino/internal/dal"
 	"frappuccino/models"
 	"frappuccino/utils"
+	"log"
+	"strings"
 )
 
 type InventoryServiceInterface interface {
@@ -43,7 +42,7 @@ func (s InventoryService) CreateInventory(inventory models.InventoryItem) (model
 		return models.InventoryItem{}, err
 	}
 
-	log.Printf("Inventory created: %s", newInventory.IngredientID)
+	log.Printf("Inventory created: %d", newInventory.IngredientID)
 	return newInventory, nil
 }
 

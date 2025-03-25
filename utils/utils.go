@@ -2,14 +2,16 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"frappuccino/models"
 	"net/http"
 	"regexp"
 	"strings"
 	"unicode/utf8"
-
-	"frappuccino/models"
 )
+
+var ErrValidation = errors.New("validation error")
 
 type ErrorResponse struct {
 	Error string `json:"error"`
@@ -32,19 +34,19 @@ func ResponseInJSON(w http.ResponseWriter, statusCode int, object interface{}) {
 
 func ValidateMenuItem(menuItem models.MenuItem) error {
 	if err := IsValidName(menuItem.Name); err != nil {
-		return fmt.Errorf("invalid name: %v", err)
+		return fmt.Errorf("%w: invalid name: %v", ErrValidation, err)
 	}
 
 	if err := ValidateDescription(menuItem.Description); err != nil {
-		return fmt.Errorf("invalid description: %v", err)
+		return fmt.Errorf("%w: invalid description: %v", ErrValidation, err)
 	}
 
 	if err := ValidatePrice(menuItem.Price); err != nil {
-		return fmt.Errorf("invalid price: %v", err)
+		return fmt.Errorf("%w: invalid price: %v", ErrValidation, err)
 	}
 
 	if err := ValidateIngredients(menuItem.Ingredients); err != nil {
-		return fmt.Errorf("invalid ingredients: %v", err)
+		return fmt.Errorf("%w: invalid ingredients: %v", ErrValidation, err)
 	}
 
 	return nil
@@ -182,44 +184,44 @@ func IsValidDir(dir string) bool {
 	return true
 }
 
-func ValidateOrder(menu []models.MenuItem, getOrder models.Order) error {
-	var idshki []string
-	for i := 0; i < len(menu); i++ {
-		for _, item := range getOrder.Items {
-			if item.ProductID == menu[i].ID {
-				idshki = append(idshki, item.ProductID)
-			}
-		}
-	}
-	var count int = len(idshki)
-	var correctProducts []string
-	// 2. Перебираем заказ и пробиваем на валидацию
-	for _, item := range getOrder.Items {
-		err := ValidateQuantity(float64(item.Quantity)) // преждевременная валидация на большие и отрицательные цифрры она не плоха
-		if err != nil {
-			return err
-		}
+// func ValidateOrder(menu []models.MenuItem, getOrder models.Order) error {
+// 	var idshki []string
+// 	for i := 0; i < len(menu); i++ {
+// 		for _, item := range getOrder.Items {
+// 			if item.ProductID == menu[i].ID {
+// 				idshki = append(idshki, item.ProductID)
+// 			}
+// 		}
+// 	}
+// 	var count int = len(idshki)
+// 	var correctProducts []string
+// 	// 2. Перебираем заказ и пробиваем на валидацию
+// 	for _, item := range getOrder.Items {
+// 		err := ValidateQuantity(float64(item.Quantity)) // преждевременная валидация на большие и отрицательные цифрры она не плоха
+// 		if err != nil {
+// 			return err
+// 		}
 
-		if len(idshki) == 0 {
-			return fmt.Errorf("Invalid product ID: %s. Product not found in the menu.", item.ProductID)
-		}
+// 		if len(idshki) == 0 {
+// 			return fmt.Errorf("Invalid product ID: %s. Product not found in the menu.", item.ProductID)
+// 		}
 
-		for i := 0; i < len(idshki); i++ {
-			if item.ProductID == idshki[i] {
-				if len(getOrder.Items) == len(idshki) {
-					count--
-				}
-				correctProducts = append(correctProducts, item.ProductID)
-			}
-		}
-	}
+// 		for i := 0; i < len(idshki); i++ {
+// 			if item.ProductID == idshki[i] {
+// 				if len(getOrder.Items) == len(idshki) {
+// 					count--
+// 				}
+// 				correctProducts = append(correctProducts, item.ProductID)
+// 			}
+// 		}
+// 	}
 
-	for _, item := range getOrder.Items {
-		for _, product := range correctProducts {
-			if count != 0 && item.ProductID != product {
-				return fmt.Errorf("Invalid product ID %s. Product not found in the menu.", item.ProductID)
-			}
-		}
-	}
-	return nil
-}
+// 	for _, item := range getOrder.Items {
+// 		for _, product := range correctProducts {
+// 			if count != 0 && item.ProductID != product {
+// 				return fmt.Errorf("Invalid product ID %s. Product not found in the menu.", item.ProductID)
+// 			}
+// 		}
+// 	}
+// 	return nil
+// }

@@ -2,13 +2,13 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log/slog"
-	"net/http"
-
 	"frappuccino/internal/service"
 	"frappuccino/models"
 	"frappuccino/utils"
+	"log/slog"
+	"net/http"
 )
 
 type MenuHandlerInterface interface {
@@ -43,16 +43,16 @@ func (m MenuHandler) HandleCreateMenuItem(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := utils.ValidateMenuItem(NewMenuItem); err != nil {
-		slog.Warn("Menu item validation failed", "error", err)
-		utils.ErrorInJSON(w, http.StatusBadRequest, err)
-		return
-	}
-
 	menu, err := m.menuService.CreateMenuItem(NewMenuItem)
 	if err != nil {
 		slog.Error("Failed to add menu item", "error", err)
-		utils.ErrorInJSON(w, 400, err)
+
+		if errors.Is(err, utils.ErrValidation) { // Создай ErrValidation в utils
+			utils.ErrorInJSON(w, http.StatusBadRequest, err)
+			return
+		}
+
+		utils.ErrorInJSON(w, http.StatusInternalServerError, err)
 		return
 	}
 

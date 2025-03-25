@@ -1,10 +1,12 @@
 package service
 
 import (
+	"errors"
 	"frappuccino/internal/dal"
 	"frappuccino/models"
 	"frappuccino/utils"
 	"log"
+	"strings"
 )
 
 type MenuServiceInterface interface {
@@ -28,42 +30,29 @@ func NewMenuService(_repository dal.MenuRepositoryInterface, _inventoryService I
 }
 
 func (s MenuService) CreateMenuItem(menuItem models.MenuItem) (models.MenuItem, error) {
-	if err := utils.IsValidName(menuItem.Name); err != nil {
+	if err := utils.ValidateMenuItem(menuItem); err != nil {
 		return models.MenuItem{}, err
 	}
 
-	if err := utils.ValidateDescription(menuItem.Description); err != nil {
-		return models.MenuItem{}, err
-	}
-
-	if err := utils.ValidatePrice(menuItem.Price); err != nil {
-		return models.MenuItem{}, err
-	}
-
-	if err := utils.ValidateIngredients(menuItem.Ingredients); err != nil {
-		return models.MenuItem{}, err
-	}
-	//1)обращаемся к репозиторию
 	newMenuItem, err := s.repository.AddMenuItem(menuItem)
 	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key value") {
+			return models.MenuItem{}, errors.New("menu item with this name already exists")
+		}
 		return models.MenuItem{}, err
 	}
-	// 2) А там : проверить существует ли такой продукт в бд, а также описание и тд,ну для этого есть юникью там и т.д.
-	// for _, item := range menu {
-	// 	if item.Name == menuItem.Name || item.Description == menuItem.Description {
-	// 		return models.MenuItem{}, fmt.Errorf("invalid requests body: name or description exeist in menu")
-	// 	}
+
 	// }
-	//3)искать айди в бд продукта
+	// 3)искать айди в бд продукта
 	// if err := utils.ValidateID(menuItem.ID); err != nil {
 	// 	return models.MenuItem{}, fmt.Errorf("invalid product ID: %v", err)
 	// }
-	//4)искать айди в бд ингридиентов инвентаря
+	// 4)искать айди в бд ингридиентов инвентаря
 	// if err := utils.ValidateMenuItem(menuItem); err != nil {
 	// 	return models.MenuItem{}, err
 	// }
 
-	log.Printf("menu item added: %s", newMenuItem.ID)
+	log.Printf("menu item added: %d", newMenuItem.ID)
 	return newMenuItem, nil
 }
 

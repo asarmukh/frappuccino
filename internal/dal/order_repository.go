@@ -39,10 +39,15 @@ func (r *OrderRepository) AddOrder(order models.Order) (models.Order, error) {
 		order.CustomerName,
 		order.TotalAmount,
 		specialInstrustionByte,
-	).Scan(&newOrder.ID, &newOrder.Status, &newOrder.TotalAmount, &newOrder.CreatedAt)
+	).Scan(&newOrder.ID, &newOrder.CustomerName, &newOrder.Status, &newOrder.TotalAmount, &newOrder.SpecialInstructions, &newOrder.IsCompleted, &newOrder.CreatedAt, &newOrder.UpdatedAt)
 	if err != nil {
 		log.Printf("Error inserting order: %v", err)
 		return models.Order{}, err
+	}
+
+	// Если есть items, то добавляем их
+	if len(order.Items) > 0 {
+		newOrder.Items = order.Items
 	}
 
 	return newOrder, nil
