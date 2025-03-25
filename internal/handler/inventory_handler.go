@@ -89,22 +89,22 @@ func (h InventoryHandler) HandleDeleteInventoryItem(w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// func (h InventoryHandler) HandleUpdateInventoryItem(w http.ResponseWriter, r *http.Request, inventoryItemID string) {
-// 	slog.Info("Received request to update inventory", "inventoryID", inventoryItemID)
+func (h InventoryHandler) HandleUpdateInventoryItem(w http.ResponseWriter, r *http.Request, inventoryItemID int) {
+	slog.Info("Received request to update inventory", "inventoryID", inventoryItemID)
 
-// 	var changedInventoryItem models.InventoryItem
-// 	if err := json.NewDecoder(r.Body).Decode(&changedInventoryItem); err != nil {
-// 		slog.Warn("Invalid JSON format", "error", err)
-// 		utils.ErrorInJSON(w, http.StatusBadRequest, err)
-// 		return
-// 	}
+	var changedInventoryItem models.InventoryItem
+	if err := json.NewDecoder(r.Body).Decode(&changedInventoryItem); err != nil {
+		slog.Warn("Invalid JSON format", "error", err)
+		utils.ErrorInJSON(w, http.StatusBadRequest, err)
+		return
+	}
 
-// 	item, err := h.inventoryService.UpdateInventoryItem(inventoryItemID, changedInventoryItem)
-// 	if err != nil {
-// 		slog.Warn("Failed to update inventory", "inventoryID", inventoryItemID, "error", err)
-// 		utils.ErrorInJSON(w, http.StatusNotFound, err)
-// 		return
-// 	}
-// 	slog.Info("inventory updated successfully", "inventoryID", item.IngredientID)
-// 	utils.ResponseInJSON(w, 200, item)
-// }
+	item, err := h.inventoryService.UpdateInventoryItem(inventoryItemID, changedInventoryItem)
+	if err != nil {
+		slog.Warn("Failed to update inventory", "inventoryID", inventoryItemID, "error", err)
+		utils.ErrorInJSON(w, http.StatusNotFound, err)
+		return
+	}
+	slog.Info("inventory updated successfully", "inventoryID", item.IngredientID)
+	utils.ResponseInJSON(w, 200, item)
+}

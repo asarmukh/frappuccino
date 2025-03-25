@@ -31,6 +31,7 @@ func HandleRequestsInventory(inventoryHandler handler.InventoryHandler) http.Han
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := strings.Trim(r.URL.Path, "/")
 		parts := strings.SplitN(path, "/", 3)
+
 		switch r.Method {
 		case http.MethodPost:
 			inventoryHandler.HandleCreateInventory(w, r)
@@ -57,6 +58,17 @@ func HandleRequestsInventory(inventoryHandler handler.InventoryHandler) http.Han
 				inventoryHandler.HandleDeleteInventoryItem(w, r, id)
 			} else {
 				http.Error(w, "Not Found", http.StatusNotFound)
+			}
+		case http.MethodPut:
+			if len(parts) == 2 {
+				id, err := strconv.Atoi(parts[1])
+				if err != nil {
+					http.Error(w, "Invalid inventory ID", http.StatusBadRequest)
+					return
+				}
+				inventoryHandler.HandleUpdateInventoryItem(w, r, id)
+			} else {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
 			}
 		default:
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
