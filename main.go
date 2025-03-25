@@ -141,6 +141,11 @@ func setupRoutes(orderHandler handler.OrderHandler, menuHandler handler.MenuHand
 		routes.HandleRequestsInventory(inventoryHandler)(w, r)
 	})
 
+	http.HandleFunc("/inventory/", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("🔥 Request processed in /inventory")
+		routes.HandleRequestsInventory(inventoryHandler)(w, r)
+	})
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("🔥 Request for an unknown route:", r.URL.Path)
 		http.Error(w, "Page not found", http.StatusNotFound)
