@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"frappuccino/models"
+	"log"
 	"strings"
 )
 
@@ -30,8 +31,12 @@ func (r MenuRepository) AddMenuItem(menuItem models.MenuItem) (models.MenuItem, 
 	defer func() {
 		if err != nil {
 			_ = tx.Rollback()
+			log.Println("Transaction rolled back:", err)
 		} else {
-			_ = tx.Commit()
+			err = tx.Commit()
+			if err != nil {
+				log.Println("Commit error:", err)
+			}
 		}
 	}()
 	categories := "{" + strings.Join(menuItem.Categories, ",") + "}"
@@ -44,7 +49,6 @@ func (r MenuRepository) AddMenuItem(menuItem models.MenuItem) (models.MenuItem, 
 		return models.MenuItem{}, err
 	}
 
-	// Проверяем инвентарь на наличие которые были отправлены пользователем
 	query2 := `SELECT EXISTS(SELECT 1 FROM inventory WHERE id = $1)`
 	for _, ingredient := range menuItem.Ingredients {
 		var exists bool
@@ -57,11 +61,18 @@ func (r MenuRepository) AddMenuItem(menuItem models.MenuItem) (models.MenuItem, 
 		}
 	}
 
-	// Вставка в menu_item_ingredients
 	for _, ingredient := range menuItem.Ingredients {
 		query := `INSERT INTO menu_item_ingredients (menu_item_id, ingredient_id, quantity)
 				  VALUES ($1, $2, $3)`
 		_, err = tx.Exec(query, menuItem.ID, ingredient.IngredientID, ingredient.Quantity)
+		if err != nil {
+			return models.MenuItem{}, err
+		}
+	}
+
+	updateQuery := `UPDATE inventory SET quantity = quantity - $1 WHERE id = $2`
+	for _, ingredient := range menuItem.Ingredients {
+		_, err = tx.Exec(updateQuery, ingredient.Quantity, ingredient.IngredientID)
 		if err != nil {
 			return models.MenuItem{}, err
 		}
