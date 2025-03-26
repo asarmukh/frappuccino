@@ -71,14 +71,14 @@ func (s OrderService) CreateOrder(order models.Order) (models.Order, error) {
 	return newOrder, nil
 }
 
-// func (s OrderService) GetAllOrders() ([]models.Order, error) {
-// 	orders, err := s.repository.LoadOrders()
-// 	if err != nil {
-// 		log.Printf("error get all orders!")
-// 		return nil, err
-// 	}
-// 	return orders, nil
-// }
+func (s OrderService) GetAllOrders() ([]models.Order, error) {
+	orders, err := s.orderRepo.LoadOrders()
+	if err != nil {
+		log.Printf("error get all orders!")
+		return nil, err
+	}
+	return orders, nil
+}
 
 // func (s OrderService) GetOrderByID(id string) (models.Order, error) {
 // 	orders, err := s.repository.LoadOrders()

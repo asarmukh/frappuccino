@@ -1,0 +1,37 @@
+  {
+    "name": "Milk",
+    "quantity": 5000, // In milliliters
+    "unit": "ml"
+}
+
+  {
+    "name": "Espresso Shot",
+    "quantity": 500, // Number of shots
+    "unit": "shots"
+  }
+
+{
+    "name": "Caffe Latte",
+    "description": "Espresso with steamed milk",
+    "price": 3.50,
+    "ingredients": [
+      {
+        "ingredient_id": 2,
+        "quantity": 1
+      },
+      {
+        "ingredient_id": 1,
+        "quantity": 200
+      }
+    ]
+  }
+
+{
+  "customer_name": "John Doe",
+  "items": [
+    {
+      "product_id": 1,
+      "quantity": 2
+    }
+  ]
+}

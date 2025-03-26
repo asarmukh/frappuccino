@@ -53,18 +53,18 @@ func (h OrderHandler) HandleCreateOrder(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// func (h OrderHandler) HandleGetAllOrders(w http.ResponseWriter, r *http.Request) {
-// 	slog.Info("Received request to get all orders")
+func (h OrderHandler) HandleGetAllOrders(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Received request to get all orders")
 
-// 	orders, err := h.orderService.GetAllOrders()
-// 	if err != nil {
-// 		slog.Error("Failed to retrieve orders", "error", err)
-// 		utils.ErrorInJSON(w, http.StatusNotFound, err)
-// 	}
+	orders, err := h.orderService.GetAllOrders()
+	if err != nil {
+		slog.Error("Failed to retrieve orders", "error", err)
+		utils.ErrorInJSON(w, http.StatusNotFound, err)
+	}
 
-// 	slog.Info("Successfully retrieved all orders", "count", len(orders))
-// 	utils.ResponseInJSON(w, 200, orders)
-// }
+	slog.Info("Successfully retrieved all orders", "count", len(orders))
+	utils.ResponseInJSON(w, 200, orders)
+}
 
 // func (h OrderHandler) HandleGetOrderById(w http.ResponseWriter, r *http.Request, orderID string) {
 // 	slog.Info("Received request to get order", "orderID", orderID)

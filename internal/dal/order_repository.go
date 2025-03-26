@@ -3,6 +3,7 @@ package dal
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"frappuccino/models"
 	"log"
 )
@@ -81,21 +82,29 @@ func (r OrderRepository) AddOrder(order models.Order) (models.Order, error) {
 	return order, nil
 }
 
-// func (r OrderRepositoryJSON) LoadOrders() ([]models.Order, error) {
-// 	filePath := filepath.Join(r.filePath, "orders.json")
-// 	file, err := os.Open(filePath)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer file.Close()
+func (r OrderRepository) LoadOrders() ([]models.Order, error) {
+	var orders []models.Order
+	query := `SELECT id, name, status, total_amount, special_instructions, created_at, updated_at FROM inventory`
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("request Execution Error: %v", err)
+	}
+	defer rows.Close()
 
-// 	var orders []models.Order
-// 	if err := json.NewDecoder(file).Decode(&orders); err != nil {
-// 		return nil, err
-// 	}
+	for rows.Next() {
+		var order models.Order
+		if err := rows.Scan(&order.ID, &order.CustomerName, &order.Status, &order.TotalAmount, &order.SpecialInstructions, &order.CreatedAt, &order.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("row Scan Error: %v", err)
+		}
+		orders = append(orders, order)
+	}
 
-// 	return orders, nil
-// }
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %v", err)
+	}
+
+	return orders, nil
+}
 
 // func (r OrderRepositoryJSON) SaveOrders(orders []models.Order) error {
 // 	filePath := filepath.Join(r.filePath, "orders.json")
