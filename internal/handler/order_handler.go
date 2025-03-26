@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"frappuccino/internal/service"
 	"frappuccino/models"
@@ -35,6 +36,10 @@ func (h OrderHandler) HandleCreateOrder(w http.ResponseWriter, r *http.Request) 
 		slog.Warn("Invalid JSON format", "error", err)
 		utils.ErrorInJSON(w, http.StatusBadRequest, fmt.Errorf("invalid JSON format: %v", err))
 		return
+	}
+	// add more validations for body json
+	if newOrder.Status != "" {
+		utils.ErrorInJSON(w, 400, errors.New("invalid request body"))
 	}
 
 	order, err := h.orderService.CreateOrder(newOrder)

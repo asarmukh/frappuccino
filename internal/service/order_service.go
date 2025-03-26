@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"frappuccino/internal/dal"
 	"frappuccino/models"
@@ -19,40 +18,51 @@ type OrderServiceInterface interface {
 }
 
 type OrderService struct {
-	repository  *dal.OrderRepository
-	menuService MenuService
-	// inventoryService InventoryService
+	orderRepo dal.OrderRepository
+	menuRepo  dal.MenuRepository
 }
 
-func NewOrderService(_repository *dal.OrderRepository, _menuService MenuService) OrderService {
+func NewOrderService(_orderRepo dal.OrderRepository, _menuRepo dal.MenuRepository) OrderService {
 	return OrderService{
-		repository:  _repository,
-		menuService: _menuService,
-		// inventoryService: _inventoryService,
+		orderRepo: _orderRepo,
+		menuRepo:  _menuRepo,
 	}
 }
 
 // Method of creating a new order
-func (s *OrderService) CreateOrder(order models.Order) (models.Order, error) {
+func (s OrderService) CreateOrder(order models.Order) (models.Order, error) {
 	if err := utils.IsValidName(order.CustomerName); err != nil {
 		return models.Order{}, err
 	}
 
-	if order.TotalAmount < 0 {
-		return models.Order{}, errors.New("total amount cannot be negative")
+	if err := utils.ValidateSpecialInstructions(order.SpecialInstructions); err != nil {
+		return models.Order{}, err
 	}
 
-	// menu, err := s.menuService.repository.LoadMenuItems()
-	// if err != nil {
-	// 	return models.Order{}, err
-	// }
+	// Checking that all products exist on the menu
+	for _, product := range order.Items {
+		exists, err := s.menuRepo.ProductExists(product.ProductID)
+		if err != nil {
+			return models.Order{}, err
+		}
+		if !exists {
+			return models.Order{}, fmt.Errorf("product with ID %d not found", product.ProductID)
+		}
+	}
 
-	// err = utils.ValidateOrder(menu, order)
-	// if err != nil {
-	// 	return models.Order{}, err
-	// }
+	// Calculating the total amount of the order
+	totalAmount := 0.0
+	for i, product := range order.Items {
+		price, err := s.menuRepo.GetProductPrice(product.ProductID)
+		if err != nil {
+			return models.Order{}, err
+		}
+		order.Items[i].Price = price
+		totalAmount += price * float64(product.Quantity)
+	}
+	order.TotalAmount = totalAmount
 
-	newOrder, err := s.repository.AddOrder(order)
+	newOrder, err := s.orderRepo.AddOrder(order)
 	if err != nil {
 		return models.Order{}, fmt.Errorf("error creating order: %w", err)
 	}

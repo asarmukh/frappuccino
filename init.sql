@@ -16,8 +16,8 @@ END $$;
 
 DO $$ 
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'size') THEN
-        CREATE TYPE size AS ENUM ('small', 'medium', 'large', 'extra_large');
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'temperature_type') THEN
+        CREATE TYPE temperature_type AS ENUM ('hot', 'warm', 'cold');
     END IF;
 END $$;
 
@@ -44,10 +44,9 @@ CREATE TABLE orders (
     name VARCHAR(50) NOT NULL,
     status order_status NOT NULL DEFAULT 'open',
     total_amount DECIMAL(10, 2) NOT NULL CHECK (total_amount >= 0),
-    special_instructions JSONB,
-    is_completed BOOLEAN NOT NULL DEFAULT FALSE,
+    special_instructions JSONB DEFAULT '{}'::JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ 
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE inventory (
@@ -60,13 +59,11 @@ CREATE TABLE inventory (
 );
 
 CREATE TABLE order_items (
-    id SERIAL PRIMARY KEY,
     order_id INT REFERENCES orders(id) ON DELETE CASCADE,
     menu_item_id INT REFERENCES menu_items(id) ON DELETE CASCADE,
     quantity INT CHECK(quantity > 0),
-    unit_price DECIMAL(10, 2) NOT NULL CHECK (unit_price > 0),
-    customizations JSONB,
-    notes TEXT
+    price DECIMAL(10, 2) NOT NULL CHECK (price > 0),
+    PRIMARY KEY (order_id, menu_item_id)
 );
 
 CREATE TABLE order_status_history (

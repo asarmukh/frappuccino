@@ -41,7 +41,7 @@ func main() {
 	menuHandler := handler.NewMenuHandler(menuService)
 
 	orderRepo := dal.NewOrderPostgresRepository(db)
-	orderService := service.NewOrderService(orderRepo, menuService)
+	orderService := service.NewOrderService(orderRepo, menuRepo)
 	orderHandler := handler.NewOrderHandler(orderService)
 
 	setupRoutes(orderHandler, menuHandler, inventoryHandler)

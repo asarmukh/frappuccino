@@ -184,6 +184,19 @@ func IsValidDir(dir string) bool {
 	return true
 }
 
+func ValidateSpecialInstructions(instructions map[string]string) error {
+	allowedKeys := map[string]bool{
+		"temperature": true,
+		"notes":       true,
+	}
+	for key := range instructions {
+		if !allowedKeys[key] {
+			return fmt.Errorf("invalid key in special_instructions: %s", key)
+		}
+	}
+	return nil
+}
+
 // func ValidateOrder(menu []models.MenuItem, getOrder models.Order) error {
 // 	var idshki []string
 // 	for i := 0; i < len(menu); i++ {

@@ -9,48 +9,76 @@ import (
 
 type OrderRepositoryInterface interface {
 	AddOrder(order models.Order) (models.Order, error)
-	LoadOrders() ([]models.Order, error)
-	SaveOrders(orders []models.Order) error
+	// LoadOrders() ([]models.Order, error)
+	// SaveOrders(orders []models.Order) error
 }
 
 type OrderRepository struct {
 	db *sql.DB
 }
 
-func NewOrderPostgresRepository(db *sql.DB) *OrderRepository {
-	return &OrderRepository{db: db}
+func NewOrderPostgresRepository(db *sql.DB) OrderRepository {
+	return OrderRepository{db: db}
 }
 
 // Method for adding a new order to the database
-func (r *OrderRepository) AddOrder(order models.Order) (models.Order, error) {
-	var newOrder models.Order
-	query := `INSERT INTO orders
-			(name, total_amount, special_instructions)
-			VALUES ($1, $2, $3)
-			RETURNING id, status, total_amount, created_at`
-
-	specialInstrustionByte, err1 := json.Marshal(order.SpecialInstructions)
-	if err1 != nil {
-		return models.Order{}, err1
-	}
-
-	err := r.db.QueryRow(
-		query,
-		order.CustomerName,
-		order.TotalAmount,
-		specialInstrustionByte,
-	).Scan(&newOrder.ID, &newOrder.CustomerName, &newOrder.Status, &newOrder.TotalAmount, &newOrder.SpecialInstructions, &newOrder.IsCompleted, &newOrder.CreatedAt, &newOrder.UpdatedAt)
+func (r OrderRepository) AddOrder(order models.Order) (models.Order, error) {
+	tx, err := r.db.Begin()
 	if err != nil {
-		log.Printf("Error inserting order: %v", err)
 		return models.Order{}, err
 	}
 
-	// Если есть items, то добавляем их
-	if len(order.Items) > 0 {
-		newOrder.Items = order.Items
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+			log.Println("Transaction rolled back:", err)
+		} else {
+			err = tx.Commit()
+			if err != nil {
+				log.Println("Commit error:", err)
+			}
+		}
+	}()
+
+	query := `INSERT INTO orders (name, total_amount, special_instructions)
+			VALUES ($1, $2, $3)
+			RETURNING id, name, status, total_amount, special_instructions, created_at, updated_at`
+
+	specialInstructionsByte, err := json.Marshal(order.SpecialInstructions)
+	if err != nil {
+		return models.Order{}, err
+	}
+	var specialInstructionsData []byte
+	if err := r.db.QueryRow(
+		query,
+		order.CustomerName,
+		order.TotalAmount,
+		specialInstructionsByte,
+	).Scan(&order.ID, &order.CustomerName, &order.Status, &order.TotalAmount, &specialInstructionsData, &order.CreatedAt, &order.UpdatedAt); err != nil {
+		log.Printf("Error inserting order: %v", err)
+		return models.Order{}, err
+	}
+	// Декодируем JSONB в map[string]string
+	if err := json.Unmarshal(specialInstructionsData, &order.SpecialInstructions); err != nil {
+		return models.Order{}, err
 	}
 
-	return newOrder, nil
+	queryPrice := `SELECT price FROM menu_items WHERE id = $1`
+	for _, product := range order.Items {
+		err := r.db.QueryRow(queryPrice, product.ProductID).Scan(&product.Price)
+		if err != nil {
+			return models.Order{}, err
+		}
+
+		query := `INSERT INTO order_items (order_id, menu_item_id, quantity, price)
+	          VALUES ($1, $2, $3, $4)`
+		_, err = tx.Exec(query, order.ID, product.ProductID, product.Quantity, product.Price)
+		if err != nil {
+			return models.Order{}, err
+		}
+	}
+
+	return order, nil
 }
 
 // func (r OrderRepositoryJSON) LoadOrders() ([]models.Order, error) {
