@@ -13,6 +13,8 @@ import (
 type OrderRepositoryInterface interface {
 	AddOrder(order models.Order) (models.Order, error)
 	LoadOrders() ([]models.Order, error)
+	LoadOrder(id int) (models.Order, error)
+	DeleteOrderByID(id int) error
 }
 
 type OrderRepository struct {
@@ -200,6 +202,35 @@ func (r OrderRepository) LoadOrder(id int) (models.Order, error) {
 	order.Items = items
 
 	return order, nil
+}
+
+func (r OrderRepository) DeleteOrderByID(id int) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to start transactioOrderRepositoryn: %v", err)
+	}
+	defer tx.Rollback()
+
+	query := `DELETE FROM orders WHERE id = $1`
+	result, err := tx.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("error while deleting element: %v", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("не удалось получить количество затронутых строк: %v", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("order with ID %d not found", id)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("error committing transaction: %v", err)
+	}
+
+	return nil
 }
 
 // func (r OrderRepositoryJSON) SaveOrders(orders []models.Order) error {

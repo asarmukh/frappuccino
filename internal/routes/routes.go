@@ -96,6 +96,17 @@ func HandleRequestsOrders(orderHandler handler.OrderHandler) http.HandlerFunc {
 			} else {
 				http.Error(w, "Not Found", http.StatusNotFound)
 			}
+		case http.MethodDelete:
+			if len(parts) == 2 {
+				id, err := strconv.Atoi(parts[1])
+				if err != nil {
+					http.Error(w, "Invalid order ID", http.StatusBadRequest)
+					return
+				}
+				orderHandler.HandleDeleteOrder(w, r, id)
+			} else {
+				http.Error(w, "Not Found", http.StatusNotFound)
+			}
 		default:
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		}
@@ -113,12 +124,6 @@ func HandleRequestsOrders(orderHandler handler.OrderHandler) http.HandlerFunc {
 		// 		orderHandler.HandleUpdateOrder(w, r, parts[1])
 		// 	} else {
 		// 		http.Error(w, "Bad Request", http.StatusBadRequest)
-		// 	}
-		// case http.MethodDelete:
-		// 	if len(parts) == 2 {
-		// 		orderHandler.HandleDeleteOrder(w, r, parts[1])
-		// 	} else {
-		// 		http.Error(w, "Not Found", http.StatusNotFound)
 		// 	}
 		// default:
 		// 	http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)

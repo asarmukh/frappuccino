@@ -6,13 +6,14 @@ import (
 	"frappuccino/models"
 	"frappuccino/utils"
 	"log"
+	"log/slog"
 )
 
 type OrderServiceInterface interface {
 	CreateOrder(order models.Order) (models.Order, error)
 	GetAllOrders() ([]models.Order, error)
 	GetOrderByID(id string) (models.Order, error)
-	DeleteOrder(id string) (models.Order, error)
+	DeleteOrder(id string) error
 	UpdateOrder(id string) (models.Order, error)
 	CloseOrder(orderID string) (models.Order, error)
 }
@@ -89,31 +90,15 @@ func (s OrderService) GetOrderByID(id int) (models.Order, error) {
 	return order, nil
 }
 
-// func (s OrderService) DeleteOrder(id string) error {
-// 	orders, err := s.GetAllOrders()
-// 	if err != nil {
-// 		return fmt.Errorf("failed to delete order with ID %s: %v", id, err)
-// 	}
+func (s OrderService) DeleteOrder(id int) error {
+	err := s.orderRepo.DeleteOrderByID(id)
+	if err != nil {
+		slog.Warn("Failed to delete order", "orderID", id, "error", err)
+		return fmt.Errorf("failed to delete order with ID %d: %v", id, err)
+	}
 
-// 	indexToDelete := -1
-// 	for i, order := range orders {
-// 		if order.ID == id {
-// 			indexToDelete = i
-// 			break
-// 		}
-// 	}
-
-// 	if indexToDelete == -1 {
-// 		return fmt.Errorf("order with ID %s not found", id)
-// 	}
-
-// 	orders = append(orders[:indexToDelete], orders[indexToDelete+1:]...)
-
-// 	if err := s.repository.SaveOrders(orders); err != nil {
-// 		return fmt.Errorf("could not save orders")
-// 	}
-// 	return nil
-// }
+	return nil
+}
 
 // func (s OrderService) UpdateOrder(id string, changeOrder models.Order) (models.Order, error) {
 // 	if changeOrder.CustomerName == "" || changeOrder.Items == nil {
