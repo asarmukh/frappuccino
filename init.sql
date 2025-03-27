@@ -33,8 +33,8 @@ CREATE TABLE menu_items (
     name VARCHAR(50) NOT NULL UNIQUE,
     description TEXT,
     price DECIMAL(10, 2) NOT NULL CHECK (price > 0),
-    categories VARCHAR[],
-    -- available BOOLEAN NOT NULL DEFAULT TRUE,
+    categories TEXT[],
+    available BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
