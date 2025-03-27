@@ -15,7 +15,7 @@ type OrderServiceInterface interface {
 	GetOrderByID(id string) (models.Order, error)
 	DeleteOrder(id string) error
 	UpdateOrder(id string) (models.Order, error)
-	CloseOrder(orderID string) (models.Order, error)
+	CloseOrder(id int) (models.Order, error)
 }
 
 type OrderService struct {
@@ -140,80 +140,85 @@ func (s OrderService) DeleteOrder(id int) error {
 // 	return changeOrder, fmt.Errorf("order with ID %s not found", id)
 // }
 
-// func (s OrderService) CloseOrder(id string) (models.Order, error) {
-// 	orders, err := s.repository.LoadOrders()
-// 	if err != nil {
-// 		return models.Order{}, fmt.Errorf("order with ID %s not found", id)
-// 	}
+func (s OrderService) CloseOrder(id int) (models.Order, error) {
+	order, err := s.orderRepo.CloseOrder(id)
+	if err != nil {
+		return models.Order{}, fmt.Errorf("order with ID %d not found", id)
+	}
+	return order, nil
 
-// 	orderId, err := s.GetOrderByID(id)
-// 	if err != nil {
-// 		return models.Order{}, fmt.Errorf("failed to retrieve order by ID%s", id)
-// 	}
+	// orders, err := s.repository.LoadOrders()
+	// if err != nil {
+	// 	return models.Order{}, fmt.Errorf("order with ID %s not found", id)
+	// }
 
-// 	if orderId.Status == "closed" {
-// 		return models.Order{}, fmt.Errorf("opration not allowed")
-// 	}
+	// orderId, err := s.GetOrderByID(id)
+	// if err != nil {
+	// 	return models.Order{}, fmt.Errorf("failed to retrieve order by ID%s", id)
+	// }
 
-// 	menu, err := s.menuService.repository.LoadMenuItems()
-// 	if err != nil {
-// 		return models.Order{}, err
-// 	}
+	// if orderId.Status == "closed" {
+	// 	return models.Order{}, fmt.Errorf("opration not allowed")
+	// }
 
-// 	menuMap := make(map[string]models.MenuItem)
-// 	for _, items := range menu {
-// 		menuMap[items.ID] = items
-// 	}
+	// menu, err := s.menuService.repository.LoadMenuItems()
+	// if err != nil {
+	// 	return models.Order{}, err
+	// }
 
-// 	inventory, err := s.inventoryService.GetAllInventory()
-// 	if err != nil {
-// 		return models.Order{}, fmt.Errorf("failed to retrieve inventory")
-// 	}
+	// menuMap := make(map[string]models.MenuItem)
+	// for _, items := range menu {
+	// 	menuMap[items.ID] = items
+	// }
 
-// 	var newDataMenu []models.MenuItem
+	// inventory, err := s.inventoryService.GetAllInventory()
+	// if err != nil {
+	// 	return models.Order{}, fmt.Errorf("failed to retrieve inventory")
+	// }
 
-// 	ingredientMap := make(map[string]models.InventoryItem)
-// 	for _, items := range inventory {
-// 		ingredientMap[items.IngredientID] = items
-// 	}
+	// var newDataMenu []models.MenuItem
 
-// 	for _, items := range orderId.Items {
-// 		for i := 0; i < items.Quantity; i++ {
-// 			if item, exists := menuMap[items.ProductID]; exists {
-// 				newDataMenu = append(newDataMenu, item)
-// 			}
-// 		}
-// 		if err := utils.ValidateQuantity(float64(items.Quantity)); err != nil {
-// 			return models.Order{}, err
-// 		}
-// 	}
+	// ingredientMap := make(map[string]models.InventoryItem)
+	// for _, items := range inventory {
+	// 	ingredientMap[items.IngredientID] = items
+	// }
 
-// 	for _, items := range newDataMenu {
-// 		for _, ingredient := range items.Ingredients {
-// 			if item, exist := ingredientMap[ingredient.IngredientID]; exist {
-// 				fmt.Printf("Checking ingredient ID: %v, required: %v, available: %v\n",
-// 					ingredient.IngredientID, ingredient.Quantity, item.Quantity)
-// 				if ingredient.Quantity > item.Quantity {
-// 					return models.Order{}, fmt.Errorf("not enough quantity for ingredient ID %v: required %v, available %v", ingredient.IngredientID, ingredient.Quantity, item.Quantity)
-// 				}
-// 				item.Quantity -= ingredient.Quantity
-// 				ingredientMap[ingredient.IngredientID] = item
-// 			}
-// 		}
-// 	}
+	// for _, items := range orderId.Items {
+	// 	for i := 0; i < items.Quantity; i++ {
+	// 		if item, exists := menuMap[items.ProductID]; exists {
+	// 			newDataMenu = append(newDataMenu, item)
+	// 		}
+	// 	}
+	// 	if err := utils.ValidateQuantity(float64(items.Quantity)); err != nil {
+	// 		return models.Order{}, err
+	// 	}
+	// }
 
-// 	for ingredientID, item := range ingredientMap {
-// 		if _, err := s.inventoryService.UpdateInventoryItem(ingredientID, item); err != nil {
-// 			return models.Order{}, fmt.Errorf("failed to update inventory for ingredientID %v", ingredientID)
-// 		}
-// 	}
+	// for _, items := range newDataMenu {
+	// 	for _, ingredient := range items.Ingredients {
+	// 		if item, exist := ingredientMap[ingredient.IngredientID]; exist {
+	// 			fmt.Printf("Checking ingredient ID: %v, required: %v, available: %v\n",
+	// 				ingredient.IngredientID, ingredient.Quantity, item.Quantity)
+	// 			if ingredient.Quantity > item.Quantity {
+	// 				return models.Order{}, fmt.Errorf("not enough quantity for ingredient ID %v: required %v, available %v", ingredient.IngredientID, ingredient.Quantity, item.Quantity)
+	// 			}
+	// 			item.Quantity -= ingredient.Quantity
+	// 			ingredientMap[ingredient.IngredientID] = item
+	// 		}
+	// 	}
+	// }
 
-// 	for i := 0; i < len(orders); i++ {
-// 		if orders[i].ID == id {
-// 			orders[i].Status = "closed"
-// 			s.repository.SaveOrders(orders)
-// 			return orders[i], nil
-// 		}
-// 	}
-// 	return models.Order{}, fmt.Errorf("order with ID %s not found", id)
-// }
+	// for ingredientID, item := range ingredientMap {
+	// 	if _, err := s.inventoryService.UpdateInventoryItem(ingredientID, item); err != nil {
+	// 		return models.Order{}, fmt.Errorf("failed to update inventory for ingredientID %v", ingredientID)
+	// 	}
+	// }
+
+	// for i := 0; i < len(orders); i++ {
+	// 	if orders[i].ID == id {
+	// 		orders[i].Status = "closed"
+	// 		s.repository.SaveOrders(orders)
+	// 		return orders[i], nil
+	// 	}
+	// }
+}

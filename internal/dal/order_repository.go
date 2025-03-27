@@ -15,6 +15,7 @@ type OrderRepositoryInterface interface {
 	LoadOrders() ([]models.Order, error)
 	LoadOrder(id int) (models.Order, error)
 	DeleteOrderByID(id int) error
+	CloseOrder(id int) (models.Order, error)
 }
 
 type OrderRepository struct {
@@ -211,8 +212,8 @@ func (r OrderRepository) DeleteOrderByID(id int) error {
 	}
 	defer tx.Rollback()
 
-	query := `DELETE FROM orders WHERE id = $1`
-	result, err := tx.Exec(query, id)
+	queryDelete := `DELETE FROM orders WHERE id = $1`
+	result, err := tx.Exec(queryDelete, id)
 	if err != nil {
 		return fmt.Errorf("error while deleting element: %v", err)
 	}
@@ -233,19 +234,35 @@ func (r OrderRepository) DeleteOrderByID(id int) error {
 	return nil
 }
 
-// func (r OrderRepositoryJSON) SaveOrders(orders []models.Order) error {
-// 	filePath := filepath.Join(r.filePath, "orders.json")
-// 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
-// 	if err != nil {
-// 		return fmt.Errorf("could not open or create inventory file: %v", err)
-// 	}
-// 	defer file.Close()
+func (r OrderRepository) CloseOrder(id int) (models.Order, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return models.Order{}, fmt.Errorf("failed to start transactioOrderRepositoryn: %v", err)
+	}
+	defer tx.Rollback()
 
-// 	encoder := json.NewEncoder(file)
-// 	encoder.SetIndent("", "  ")
-// 	if err := encoder.Encode(orders); err != nil {
-// 		return fmt.Errorf("could not encode inventory to file: %v", err)
-// 	}
+	queryDelete := `UPDATE orders SET status = $2, updated_at = NOW() WHERE id = $1`
+	result, err2 := tx.Exec(queryDelete, id, "close")
+	if err2 != nil {
+		return models.Order{}, fmt.Errorf("error while closing order: %v", err)
+	}
 
-// 	return nil
-// }
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return models.Order{}, fmt.Errorf("failed to get number of affected rows: %v", err)
+	}
+
+	if rowsAffected == 0 {
+		return models.Order{}, fmt.Errorf("order with ID %d not found", id)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return models.Order{}, fmt.Errorf("error committing transaction: %v", err)
+	}
+	order, errLoad := r.LoadOrder(id)
+	if errLoad != nil {
+		return models.Order{}, err
+	}
+
+	return order, nil
+}

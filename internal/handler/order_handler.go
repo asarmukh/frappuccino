@@ -14,10 +14,10 @@ import (
 type OrderHandlerInterface interface {
 	HandleCreateOrder(w http.ResponseWriter, r *http.Request)
 	HandleGetAllOrders(w http.ResponseWriter, r *http.Request)
-	HandleGetOrderById(w http.ResponseWriter, r *http.Request, orderID string)
-	HandleDeleteOrder(w http.ResponseWriter, r *http.Request, orderID string)
-	HandleUpdateOrder(w http.ResponseWriter, r *http.Request, orderID string)
-	HandleCloseOrder(w http.ResponseWriter, r *http.Request, orderID string)
+	HandleGetOrderById(w http.ResponseWriter, r *http.Request, orderID int)
+	HandleDeleteOrder(w http.ResponseWriter, r *http.Request, orderID int)
+	HandleUpdateOrder(w http.ResponseWriter, r *http.Request, orderID int)
+	HandleCloseOrder(w http.ResponseWriter, r *http.Request, orderID int)
 }
 
 type OrderHandler struct {
@@ -116,16 +116,16 @@ func (h OrderHandler) HandleDeleteOrder(w http.ResponseWriter, r *http.Request, 
 // 	}
 // }
 
-// func (h OrderHandler) HandleCloseOrder(w http.ResponseWriter, r *http.Request, orderID string) {
-// 	slog.Info("Received request to close order", "orderID", orderID)
+func (h OrderHandler) HandleCloseOrder(w http.ResponseWriter, r *http.Request, orderID int) {
+	slog.Info("Received request to close order", "orderID", orderID)
 
-// 	order, err := h.orderService.CloseOrder(orderID)
-// 	if err != nil {
-// 		slog.Warn("Failed to close order", "orderID", orderID, "error", err)
-// 		utils.ErrorInJSON(w, http.StatusNotFound, err)
-// 		return
-// 	} else {
-// 		slog.Info("Order closed successfully", "orderID", order.ID)
-// 		utils.ResponseInJSON(w, 200, order)
-// 	}
-// }
+	order, err := h.orderService.CloseOrder(orderID)
+	if err != nil {
+		slog.Warn("Failed to close order", "orderID", orderID, "error", err)
+		utils.ErrorInJSON(w, http.StatusNotFound, err)
+		return
+	} else {
+		slog.Info("Order closed successfully", "orderID", order.ID)
+		utils.ResponseInJSON(w, 200, order)
+	}
+}
