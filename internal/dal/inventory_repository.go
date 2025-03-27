@@ -10,7 +10,6 @@ import (
 type InventoryRepositoryInterface interface {
 	AddInventory(inventory models.InventoryItem) (models.InventoryItem, error)
 	LoadInventory() ([]models.InventoryItem, error)
-	SaveInventory(inventories []models.InventoryItem) error
 	GetInventoryItemByID(id int) (models.InventoryItem, error)
 	DeleteInventoryItemByID(id int) error
 	UpdateInventoryItem(inventoryItemID int, changedInventoryItem models.InventoryItem) (models.InventoryItem, error)
@@ -54,45 +53,6 @@ func (r InventoryRepositoryPostgres) AddInventory(inventory models.InventoryItem
 	}
 
 	return newInventory, nil
-}
-
-func (r InventoryRepositoryPostgres) SaveInventory(inventories []models.InventoryItem) error {
-	if len(inventories) == 0 {
-		return nil
-	}
-
-	query := `
-		INSERT INTO inventory (ingredient_name, quantity, unit, reorder_threshold)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (ingredient_name) 
-		DO UPDATE SET quantity = EXCLUDED.quantity, unit = EXCLUDED.unit, reorder_threshold = EXCLUDED.reorder_threshold
-	   `
-
-	tx, err := r.db.Begin()
-	if err != nil {
-		return fmt.Errorf("не удалось начать транзакцию: %v", err)
-	}
-
-	stmt, err := tx.Prepare(query)
-	if err != nil {
-		tx.Rollback()
-		return fmt.Errorf("не удалось подготовить запрос: %v", err)
-	}
-	defer stmt.Close()
-
-	for _, inv := range inventories {
-		_, err := stmt.Exec(inv.Name, inv.Quantity, inv.Unit, inv.ReorderThreshold)
-		if err != nil {
-			tx.Rollback()
-			return fmt.Errorf("ошибка при выполнении запроса: %v", err)
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("ошибка при коммите транзакции: %v", err)
-	}
-
-	return nil
 }
 
 func (r InventoryRepositoryPostgres) LoadInventory() ([]models.InventoryItem, error) {

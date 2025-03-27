@@ -11,7 +11,6 @@ import (
 
 type MenuRepositoryInterface interface {
 	AddMenuItem(menuItem models.MenuItem) (models.MenuItem, error)
-	// SaveMenuItems(menuItems []models.MenuItem) error
 	LoadMenuItems() ([]models.MenuItem, error)
 	GetMenuItemByID(id int) (models.MenuItem, error)
 	DeleteMenuItemByID(id int) error
@@ -76,17 +75,6 @@ func (r MenuRepository) AddMenuItem(menuItem models.MenuItem) (models.MenuItem, 
 
 	return menuItem, nil
 }
-
-// func (r MenuRepository) SaveMenuItems(menuItems []models.MenuItem) error {
-// 	if len(menuItems) == 0 {
-// 		return nil
-// 	}
-
-// 	query := `
-// 		INSERT INTO menu_items (name, description, price, categories, available)
-// 		VALUES ($1, $2, $3, $4, $5)
-// 		`
-// }
 
 func (r MenuRepository) LoadMenuItems() ([]models.MenuItem, error) {
 	var menuItems []models.MenuItem
