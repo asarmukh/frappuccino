@@ -66,19 +66,19 @@ func (h OrderHandler) HandleGetAllOrders(w http.ResponseWriter, r *http.Request)
 	utils.ResponseInJSON(w, 200, orders)
 }
 
-// func (h OrderHandler) HandleGetOrderById(w http.ResponseWriter, r *http.Request, orderID string) {
-// 	slog.Info("Received request to get order", "orderID", orderID)
+func (h OrderHandler) HandleGetOrderById(w http.ResponseWriter, r *http.Request, orderID int) {
+	slog.Info("Received request to get order", "orderID", orderID)
 
-// 	order, err := h.orderService.GetOrderByID(orderID)
-// 	if err != nil {
-// 		slog.Warn("Order not found", "orderID", orderID, "error", err)
-// 		utils.ErrorInJSON(w, http.StatusNotFound, err)
-// 		return
-// 	}
+	order, err := h.orderService.GetOrderByID(orderID)
+	if err != nil {
+		slog.Warn("Order not found", "orderID", orderID, "error", err)
+		utils.ErrorInJSON(w, http.StatusNotFound, err)
+		return
+	}
 
-// 	slog.Info("Successfully retrieved order", "orderID", order.ID)
-// 	utils.ResponseInJSON(w, 200, order)
-// }
+	slog.Info("Successfully retrieved order", "orderID", order.ID)
+	utils.ResponseInJSON(w, 200, order)
+}
 
 // func (h OrderHandler) HandleDeleteOrder(w http.ResponseWriter, r *http.Request, orderID string) {
 // 	slog.Info("Received request to delete order", "orderID", orderID)

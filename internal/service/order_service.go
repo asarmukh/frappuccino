@@ -80,21 +80,14 @@ func (s OrderService) GetAllOrders() ([]models.Order, error) {
 	return orders, nil
 }
 
-// func (s OrderService) GetOrderByID(id string) (models.Order, error) {
-// 	orders, err := s.repository.LoadOrders()
-// 	if err != nil && orders != nil {
-// 		return models.Order{}, fmt.Errorf("failed to get order: %v", err)
-// 	}
+func (s OrderService) GetOrderByID(id int) (models.Order, error) {
+	order, err := s.orderRepo.LoadOrder(id)
+	if err != nil {
+		return models.Order{}, err
+	}
 
-// 	if len(orders) > 0 {
-// 		for i := 0; i < len(orders); i++ {
-// 			if orders[i].ID == id {
-// 				return orders[i], nil
-// 			}
-// 		}
-// 	}
-// 	return models.Order{}, fmt.Errorf("order with ID %s not found", id)
-// }
+	return order, nil
+}
 
 // func (s OrderService) DeleteOrder(id string) error {
 // 	orders, err := s.GetAllOrders()

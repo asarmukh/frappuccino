@@ -130,6 +130,10 @@ func setupRoutes(orderHandler handler.OrderHandler, menuHandler handler.MenuHand
 		log.Println("🔥 Request processed in /orders")
 		routes.HandleRequestsOrders(orderHandler)(w, r)
 	})
+	http.HandleFunc("/orders/", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("🔥 Request processed in /orders")
+		routes.HandleRequestsOrders(orderHandler)(w, r)
+	})
 
 	http.HandleFunc("/menu", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("🔥 Request processed in /menu")

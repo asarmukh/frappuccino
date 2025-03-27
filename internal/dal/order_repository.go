@@ -3,15 +3,16 @@ package dal
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"frappuccino/models"
+	"frappuccino/utils"
 	"log"
 )
 
 type OrderRepositoryInterface interface {
 	AddOrder(order models.Order) (models.Order, error)
-	// LoadOrders() ([]models.Order, error)
-	// SaveOrders(orders []models.Order) error
+	LoadOrders() ([]models.Order, error)
 }
 
 type OrderRepository struct {
@@ -65,45 +66,140 @@ func (r OrderRepository) AddOrder(order models.Order) (models.Order, error) {
 	}
 
 	queryPrice := `SELECT price FROM menu_items WHERE id = $1`
-	for _, product := range order.Items {
-		err := r.db.QueryRow(queryPrice, product.ProductID).Scan(&product.Price)
+	for i := range order.Items {
+		err := r.db.QueryRow(queryPrice, order.Items[i].ProductID).Scan(&order.Items[i].Price)
 		if err != nil {
 			return models.Order{}, err
 		}
 
 		query := `INSERT INTO order_items (order_id, menu_item_id, quantity, price)
-	          VALUES ($1, $2, $3, $4)`
-		_, err = tx.Exec(query, order.ID, product.ProductID, product.Quantity, product.Price)
+				  VALUES ($1, $2, $3, $4)`
+		_, err = tx.Exec(query, order.ID, order.Items[i].ProductID, order.Items[i].Quantity, order.Items[i].Price)
 		if err != nil {
 			return models.Order{}, err
 		}
 	}
+	queryItems := `SELECT menu_item_id, quantity, price FROM order_items WHERE order_id = $1`
+	rows, err := tx.Query(queryItems, order.ID)
+	if err != nil {
+		tx.Rollback()
+		return models.Order{}, fmt.Errorf("ошибка получения списка товаров заказа: %w", err)
+	}
+	defer rows.Close()
+
+	var items []models.OrderItem
+	for rows.Next() {
+		var item models.OrderItem
+		if err := rows.Scan(&item.ProductID, &item.Quantity, &item.Price); err != nil {
+			tx.Rollback()
+			return models.Order{}, fmt.Errorf("ошибка при сканировании товаров: %w", err)
+		}
+		items = append(items, item)
+	}
+	order.Items = items
 
 	return order, nil
 }
 
 func (r OrderRepository) LoadOrders() ([]models.Order, error) {
 	var orders []models.Order
-	query := `SELECT id, name, status, total_amount, special_instructions, created_at, updated_at FROM inventory`
+
+	// Получаем все заказы
+	query := `SELECT id, name, status, total_amount, special_instructions, created_at, updated_at FROM orders`
 	rows, err := r.db.Query(query)
 	if err != nil {
-		return nil, fmt.Errorf("request Execution Error: %v", err)
+		return nil, fmt.Errorf("ошибка выполнения запроса: %v", err)
 	}
-	defer rows.Close()
+	defer rows.Close() // Закрываем `rows` только ОДИН раз
 
 	for rows.Next() {
 		var order models.Order
-		if err := rows.Scan(&order.ID, &order.CustomerName, &order.Status, &order.TotalAmount, &order.SpecialInstructions, &order.CreatedAt, &order.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("row Scan Error: %v", err)
+		var specialInstructionsStr string
+
+		// Сканируем данные заказа
+		if err := rows.Scan(&order.ID, &order.CustomerName, &order.Status, &order.TotalAmount, &specialInstructionsStr, &order.CreatedAt, &order.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("ошибка сканирования строки: %v", err)
 		}
+
+		// Декодируем JSON
+		if err := json.Unmarshal([]byte(specialInstructionsStr), &order.SpecialInstructions); err != nil {
+			return nil, fmt.Errorf("ошибка декодирования JSON: %v", err)
+		}
+
+		// Загружаем товары для этого заказа
+		queryItems := `SELECT menu_item_id, quantity, price FROM order_items WHERE order_id = $1`
+		itemRows, err := r.db.Query(queryItems, order.ID)
+		if err != nil {
+			return nil, fmt.Errorf("ошибка получения списка товаров заказа: %w", err)
+		}
+		defer itemRows.Close() // Отдельный `defer` для товаров
+
+		var items []models.OrderItem
+		for itemRows.Next() {
+			var item models.OrderItem
+			if err := itemRows.Scan(&item.ProductID, &item.Quantity, &item.Price); err != nil {
+				return nil, fmt.Errorf("ошибка при сканировании товаров: %w", err)
+			}
+			items = append(items, item)
+		}
+		order.Items = items
+
 		orders = append(orders, order)
 	}
 
+	// Проверяем ошибки во внешнем rows
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("row iteration error: %v", err)
+		return nil, fmt.Errorf("ошибка итерации строк: %v", err)
 	}
 
 	return orders, nil
+}
+
+func (r OrderRepository) LoadOrder(id int) (models.Order, error) {
+	var order models.Order
+	var specialInstructionsStr string
+	query := `SELECT id, name, status, total_amount, special_instructions, created_at, updated_at FROM orders WHERE id = $1`
+	err := r.db.QueryRow(query, id).Scan(
+		&order.ID,
+		&order.CustomerName,
+		&order.Status,
+		&order.TotalAmount,
+		&specialInstructionsStr,
+		&order.CreatedAt,
+		&order.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.Order{}, fmt.Errorf("order with ID %d not found", id)
+		}
+		return models.Order{}, fmt.Errorf("error getting element: %v", err)
+	}
+	specialInstructions, err := utils.ConvertSpecialInstructions(specialInstructionsStr)
+	if err != nil {
+		return models.Order{}, fmt.Errorf("error converting special_instructions: %v", err)
+	}
+
+	order.SpecialInstructions = specialInstructions
+
+	// Загружаем товары для этого заказа
+	queryItems := `SELECT menu_item_id, quantity, price FROM order_items WHERE order_id = $1`
+	itemRows, err := r.db.Query(queryItems, order.ID)
+	if err != nil {
+		return models.Order{}, fmt.Errorf("ошибка получения списка товаров заказа: %w", err)
+	}
+	defer itemRows.Close() // Отдельный `defer` для товаров
+
+	var items []models.OrderItem
+	for itemRows.Next() {
+		var item models.OrderItem
+		if err := itemRows.Scan(&item.ProductID, &item.Quantity, &item.Price); err != nil {
+			return models.Order{}, fmt.Errorf("ошибка при сканировании товаров: %w", err)
+		}
+		items = append(items, item)
+	}
+	order.Items = items
+
+	return order, nil
 }
 
 // func (r OrderRepositoryJSON) SaveOrders(orders []models.Order) error {
