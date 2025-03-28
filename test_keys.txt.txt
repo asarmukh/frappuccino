@@ -1,12 +1,12 @@
   {
     "name": "Milk",
-    "quantity": 5000, // In milliliters
+    "quantity": 5000,
     "unit": "ml"
 }
 
   {
     "name": "Espresso Shot",
-    "quantity": 500, // Number of shots
+    "quantity": 500,
     "unit": "shots"
   }
 

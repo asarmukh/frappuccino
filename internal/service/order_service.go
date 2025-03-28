@@ -143,7 +143,7 @@ func (s OrderService) DeleteOrder(id int) error {
 func (s OrderService) CloseOrder(id int) (models.Order, error) {
 	order, err := s.orderRepo.CloseOrder(id)
 	if err != nil {
-		return models.Order{}, fmt.Errorf("order with ID %d not found", id)
+		return models.Order{}, err
 	}
 	return order, nil
 

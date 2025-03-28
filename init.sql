@@ -10,7 +10,7 @@ DROP TABLE IF EXISTS inventory_transaction CASCADE;
 DO $$ 
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_status') THEN
-        CREATE TYPE order_status AS ENUM ('open', 'updated', 'close', 'cancelled');
+        CREATE TYPE order_status AS ENUM ('open', 'updated', 'closed', 'cancelled');
     END IF;
 END $$;
 
@@ -34,7 +34,6 @@ CREATE TABLE menu_items (
     description TEXT,
     price DECIMAL(10, 2) NOT NULL CHECK (price > 0),
     categories VARCHAR[],
-    -- available BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

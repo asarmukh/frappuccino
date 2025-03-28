@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"frappuccino/internal/db"
 	"frappuccino/models"
 	"frappuccino/utils"
 	"log"
@@ -235,33 +236,78 @@ func (r OrderRepository) DeleteOrderByID(id int) error {
 }
 
 func (r OrderRepository) CloseOrder(id int) (models.Order, error) {
-	tx, err := r.db.Begin()
-	if err != nil {
-		return models.Order{}, fmt.Errorf("failed to start transactioOrderRepositoryn: %v", err)
-	}
-	defer tx.Rollback()
-
-	queryDelete := `UPDATE orders SET status = $2, updated_at = NOW() WHERE id = $1`
-	result, err2 := tx.Exec(queryDelete, id, "close")
-	if err2 != nil {
-		return models.Order{}, fmt.Errorf("error while closing order: %v", err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return models.Order{}, fmt.Errorf("failed to get number of affected rows: %v", err)
-	}
-
-	if rowsAffected == 0 {
-		return models.Order{}, fmt.Errorf("order with ID %d not found", id)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return models.Order{}, fmt.Errorf("error committing transaction: %v", err)
-	}
 	order, errLoad := r.LoadOrder(id)
 	if errLoad != nil {
+		return order, errLoad
+	}
+	if order.Status == "closed" {
+		return models.Order{}, fmt.Errorf("this order with %d is already closed", id)
+	}
+
+	// Шаг 1: Загружаем все позиции заказа
+	var orderItems []models.OrderItem
+	queryItems := `SELECT menu_item_id, quantity, price FROM order_items WHERE order_id = $1`
+	rows, errItem := r.db.Query(queryItems, id)
+	if errItem != nil {
+		return models.Order{}, errItem
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var item models.OrderItem
+		if err := rows.Scan(&item.ProductID, &item.Quantity, &item.Price); err != nil {
+			return models.Order{}, err
+		}
+		orderItems = append(orderItems, item)
+	}
+
+	if err := rows.Err(); err != nil {
 		return models.Order{}, err
+	}
+
+	tm := db.NewTransactionManager(r.db)
+	errTransact := tm.WithTransaction(func(tx *db.TransactionManager) error {
+		querySubsctruct := `UPDATE inventory SET quantity = quantity - $1 WHERE id = $2`
+
+		for _, item := range orderItems {
+			ingredienRows, err := tx.Query(querySubsctruct, item.Quantity)
+			if err != nil {
+				return err
+			}
+			defer ingredienRows.Close()
+
+			for ingredienRows.Next() {
+				var ingredientID int
+				var requiredQuantity int
+				if err := ingredienRows.Scan(&ingredientID, &requiredQuantity); err != nil {
+					return err
+				}
+
+			}
+		}
+
+		queryClosing := `UPDATE orders SET status = $2, updated_at = NOW() WHERE id = $1`
+		result, err := tx.Exec(queryClosing, id, "closed")
+		if err != nil {
+			return fmt.Errorf("error while closing order: %v", err)
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("failed to get number of affected rows: %v", err)
+		}
+
+		if rowsAffected == 0 {
+			return fmt.Errorf("order with ID %d not found", id)
+		}
+
+		return err
+	})
+	if errTransact != nil {
+		return models.Order{}, errTransact
+	}
+	order, errLoad = r.LoadOrder(id)
+	if errLoad != nil {
+		return models.Order{}, errLoad
 	}
 
 	return order, nil

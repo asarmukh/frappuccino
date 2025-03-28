@@ -79,15 +79,15 @@ func HandleRequestsInventory(inventoryHandler handler.InventoryHandler) http.Han
 func HandleRequestsOrders(orderHandler handler.OrderHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := strings.Trim(r.URL.Path, "/")
-		parts := strings.SplitN(path, "/", 3)
+		parts := strings.Split(path, "/")
 		var id int
 		if len(parts) > 1 {
-			idd, err := strconv.Atoi(parts[1])
+			var err error
+			id, err = strconv.Atoi(parts[1])
 			if err != nil {
 				http.Error(w, "Invalid order ID", http.StatusBadRequest)
 				return
 			}
-			id = idd
 		}
 
 		switch r.Method {
