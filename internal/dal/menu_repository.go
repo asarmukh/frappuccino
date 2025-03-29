@@ -11,7 +11,6 @@ import (
 
 type MenuRepositoryInterface interface {
 	AddMenuItem(menuItem models.MenuItem) (models.MenuItem, error)
-	// SaveMenuItems(menuItems []models.MenuItem) error
 	LoadMenuItems() ([]models.MenuItem, error)
 	GetMenuItemByID(id int) (models.MenuItem, error)
 	DeleteMenuItemByID(id int) error
@@ -46,9 +45,9 @@ func (r MenuRepository) AddMenuItem(menuItem models.MenuItem) (models.MenuItem, 
 	categories := "{" + strings.Join(menuItem.Categories, ",") + "}"
 
 	query := `INSERT INTO menu_items (name, description, price, categories, available) 
-			  VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at, updated_at`
+			  VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at`
 	err = tx.QueryRow(query, menuItem.Name, menuItem.Description, menuItem.Price, categories, menuItem.Available).
-		Scan(&menuItem.ID, &menuItem.CreatedAt, &menuItem.UpdatedAt)
+		Scan(&menuItem.ID, &menuItem.CreatedAt)
 	if err != nil {
 		return models.MenuItem{}, err
 	}
@@ -76,17 +75,6 @@ func (r MenuRepository) AddMenuItem(menuItem models.MenuItem) (models.MenuItem, 
 
 	return menuItem, nil
 }
-
-// func (r MenuRepository) SaveMenuItems(menuItems []models.MenuItem) error {
-// 	if len(menuItems) == 0 {
-// 		return nil
-// 	}
-
-// 	query := `
-// 		INSERT INTO menu_items (name, description, price, categories, available)
-// 		VALUES ($1, $2, $3, $4, $5)
-// 		`
-// }
 
 func (r MenuRepository) LoadMenuItems() ([]models.MenuItem, error) {
 	var menuItems []models.MenuItem
@@ -246,5 +234,78 @@ func (r MenuRepository) DeleteMenuItemByID(id int) error {
 }
 
 func (r MenuRepository) UpdateMenu(id int, changeMenu models.MenuItem) (models.MenuItem, error) {
-	return models.MenuItem{}, nil
+	tx, err := r.db.Begin()
+	if err != nil {
+		return models.MenuItem{}, fmt.Errorf("не удалось начать транзакцию: %v", err)
+	}
+	defer tx.Rollback()
+
+	var existingItem models.MenuItem
+	var categories string
+
+	query := `SELECT id, name, description, price, categories FROM menu_items WHERE id = $1`
+	err = tx.QueryRow(query, id).Scan(
+		&existingItem.ID,
+		&existingItem.Name,
+		&existingItem.Description,
+		&existingItem.Price,
+		&categories,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.MenuItem{}, fmt.Errorf("menu item с ID %d не найден", id)
+		}
+		return models.MenuItem{}, fmt.Errorf("ошибка при получении элемента: %v", err)
+	}
+
+	if changeMenu.ID != 0 && changeMenu.ID != existingItem.ID {
+		return models.MenuItem{}, errors.New("нельзя изменить ID")
+	}
+
+	updateQuery := `UPDATE menu_items SET name = $1, description = $2, price = $3, categories = $4, updated_at = NOW() WHERE id = $5 RETURNING id, name, description, price, categories, created_at, updated_at`
+	err = tx.QueryRow(
+		updateQuery,
+		changeMenu.Name,
+		changeMenu.Description,
+		changeMenu.Price,
+		categories,
+		id,
+	).Scan(
+		&existingItem.ID,
+		&existingItem.Name,
+		&existingItem.Description,
+		&existingItem.Price,
+		&categories,
+		&existingItem.CreatedAt,
+		&existingItem.UpdatedAt,
+	)
+
+	if categories != "" {
+		existingItem.Categories = strings.Split(categories, ",")
+	}
+
+	for _, ingredient := range changeMenu.Ingredients {
+		queryUpdateIngredients := `UPDATE menu_item_ingredients 
+		SET quantity = $3 
+		WHERE menu_item_id = $1 AND ingredient_id = $2 
+		RETURNING ingredient_id, quantity`
+
+		err = tx.QueryRow(queryUpdateIngredients, id, ingredient.IngredientID, ingredient.Quantity).Scan(&ingredient.IngredientID, &ingredient.Quantity)
+
+		if err != nil {
+			return models.MenuItem{}, fmt.Errorf("ошибка при обновлении ингредиента: %v", err)
+		}
+		existingItem.Ingredients = append(existingItem.Ingredients, ingredient)
+	}
+
+	if err != nil {
+		return models.MenuItem{}, fmt.Errorf("ошибка при обновлении элемента: %v", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return models.MenuItem{}, fmt.Errorf("ошибка при коммите транзакции: %v", err)
+	}
+
+	return existingItem, nil
 }

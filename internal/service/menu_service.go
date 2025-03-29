@@ -80,5 +80,5 @@ func (m MenuService) DeleteMenuItemByID(id int) error {
 }
 
 func (m MenuService) UpdateMenu(id int, changeMenu models.MenuItem) (models.MenuItem, error) {
-	return models.MenuItem{}, errors.New("menu item not found")
+	return m.repository.UpdateMenu(id, changeMenu)
 }
