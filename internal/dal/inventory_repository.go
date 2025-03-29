@@ -179,7 +179,7 @@ func (r InventoryRepositoryPostgres) UpdateInventoryItem(inventoryItemID int, ch
 		return models.InventoryItem{}, errors.New("нельзя изменить ID")
 	}
 
-	updateQuery := `UPDATE inventory SET ingredient_name = $1, quantity = $2, unit = $3, reorder_threshold = $4 WHERE id = $5 RETURNING id, ingredient_name, quantity, unit, reorder_threshold`
+	updateQuery := `UPDATE inventory SET ingredient_name = $1, quantity = $2, unit = $3, reorder_threshold = $4, updated_at = NOW() WHERE id = $5 RETURNING id, ingredient_name, quantity, unit, reorder_threshold, updated_at`
 	err = tx.QueryRow(
 		updateQuery,
 		changedInventoryItem.Name,
@@ -193,6 +193,7 @@ func (r InventoryRepositoryPostgres) UpdateInventoryItem(inventoryItemID int, ch
 		&existingItem.Quantity,
 		&existingItem.Unit,
 		&existingItem.ReorderThreshold,
+		&existingItem.UpdatedAt,
 	)
 
 	if err != nil {
