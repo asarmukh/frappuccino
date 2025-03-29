@@ -45,9 +45,9 @@ func (r MenuRepository) AddMenuItem(menuItem models.MenuItem) (models.MenuItem, 
 	categories := "{" + strings.Join(menuItem.Categories, ",") + "}"
 
 	query := `INSERT INTO menu_items (name, description, price, categories, available) 
-			  VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at, updated_at`
+			  VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at`
 	err = tx.QueryRow(query, menuItem.Name, menuItem.Description, menuItem.Price, categories, menuItem.Available).
-		Scan(&menuItem.ID, &menuItem.CreatedAt, &menuItem.UpdatedAt)
+		Scan(&menuItem.ID, &menuItem.CreatedAt)
 	if err != nil {
 		return models.MenuItem{}, err
 	}
@@ -234,5 +234,79 @@ func (r MenuRepository) DeleteMenuItemByID(id int) error {
 }
 
 func (r MenuRepository) UpdateMenu(id int, changeMenu models.MenuItem) (models.MenuItem, error) {
-	return models.MenuItem{}, nil
+	tx, err := r.db.Begin()
+	if err != nil {
+		return models.MenuItem{}, fmt.Errorf("не удалось начать транзакцию: %v", err)
+	}
+	defer tx.Rollback()
+
+	var existingItem models.MenuItem
+	var categories string
+
+	query := `SELECT id, name, description, price, categories FROM menu_items WHERE id = $1`
+	err = tx.QueryRow(query, id).Scan(
+		&existingItem.ID,
+		&existingItem.Name,
+		&existingItem.Description,
+		&existingItem.Price,
+		&categories,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.MenuItem{}, fmt.Errorf("menu item с ID %d не найден", id)
+		}
+		return models.MenuItem{}, fmt.Errorf("ошибка при получении элемента: %v", err)
+	}
+
+	if changeMenu.ID != 0 && changeMenu.ID != existingItem.ID {
+		return models.MenuItem{}, errors.New("нельзя изменить ID")
+	}
+
+	updateQuery := `UPDATE menu_items SET name = $1, description = $2, price = $3, categories = $4, updated_at = NOW() WHERE id = $5 RETURNING id, name, description, price, categories, created_at, updated_at`
+	err = tx.QueryRow(
+		updateQuery,
+		changeMenu.Name,
+		changeMenu.Description,
+		changeMenu.Price,
+		categories,
+		id,
+	).Scan(
+		&existingItem.ID,
+		&existingItem.Name,
+		&existingItem.Description,
+		&existingItem.Price,
+		&categories,
+		&existingItem.CreatedAt,
+		&existingItem.UpdatedAt,
+	)
+
+	if categories != "" {
+		existingItem.Categories = strings.Split(categories, ",")
+	}
+
+	queryDeleteIngredients := `DELETE FROM menu_item_ingredients WHERE menu_item_id = $1`
+	_, err = tx.Exec(queryDeleteIngredients, id)
+	if err != nil {
+		return models.MenuItem{}, err
+	}
+
+	for _, ingredient := range changeMenu.Ingredients {
+		queryInsertIngredients := `INSERT INTO menu_item_ingredients (menu_item_id, ingredient_id, quantity)
+                            VALUES ($1, $2, $3)`
+		_, err = tx.Exec(queryInsertIngredients, id, ingredient.IngredientID, ingredient.Quantity)
+		if err != nil {
+			return models.MenuItem{}, err
+		}
+	}
+
+	if err != nil {
+		return models.MenuItem{}, fmt.Errorf("ошибка при обновлении элемента: %v", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return models.MenuItem{}, fmt.Errorf("ошибка при коммите транзакции: %v", err)
+	}
+
+	return existingItem, nil
 }
