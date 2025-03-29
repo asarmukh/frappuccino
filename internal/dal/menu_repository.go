@@ -285,19 +285,18 @@ func (r MenuRepository) UpdateMenu(id int, changeMenu models.MenuItem) (models.M
 		existingItem.Categories = strings.Split(categories, ",")
 	}
 
-	queryDeleteIngredients := `DELETE FROM menu_item_ingredients WHERE menu_item_id = $1`
-	_, err = tx.Exec(queryDeleteIngredients, id)
-	if err != nil {
-		return models.MenuItem{}, err
-	}
-
 	for _, ingredient := range changeMenu.Ingredients {
-		queryInsertIngredients := `INSERT INTO menu_item_ingredients (menu_item_id, ingredient_id, quantity)
-                            VALUES ($1, $2, $3)`
-		_, err = tx.Exec(queryInsertIngredients, id, ingredient.IngredientID, ingredient.Quantity)
+		queryUpdateIngredients := `UPDATE menu_item_ingredients 
+		SET quantity = $3 
+		WHERE menu_item_id = $1 AND ingredient_id = $2 
+		RETURNING ingredient_id, quantity`
+
+		err = tx.QueryRow(queryUpdateIngredients, id, ingredient.IngredientID, ingredient.Quantity).Scan(&ingredient.IngredientID, &ingredient.Quantity)
+
 		if err != nil {
-			return models.MenuItem{}, err
+			return models.MenuItem{}, fmt.Errorf("ошибка при обновлении ингредиента: %v", err)
 		}
+		existingItem.Ingredients = append(existingItem.Ingredients, ingredient)
 	}
 
 	if err != nil {
