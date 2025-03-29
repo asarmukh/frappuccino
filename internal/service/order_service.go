@@ -12,9 +12,9 @@ import (
 type OrderServiceInterface interface {
 	CreateOrder(order models.Order) (models.Order, error)
 	GetAllOrders() ([]models.Order, error)
-	GetOrderByID(id string) (models.Order, error)
-	DeleteOrder(id string) error
-	UpdateOrder(id string) (models.Order, error)
+	GetOrderByID(id int) (models.Order, error)
+	DeleteOrder(id int) error
+	UpdateOrder(id int) (models.Order, error)
 	CloseOrder(id int) (models.Order, error)
 }
 
@@ -100,45 +100,13 @@ func (s OrderService) DeleteOrder(id int) error {
 	return nil
 }
 
-// func (s OrderService) UpdateOrder(id string, changeOrder models.Order) (models.Order, error) {
-// 	if changeOrder.CustomerName == "" || changeOrder.Items == nil {
-// 		return models.Order{}, errors.New("invalid request body")
-// 	}
-// 	if changeOrder.ID != "" {
-// 		return models.Order{}, fmt.Errorf("cannot change ID or add in body requsest")
-// 	}
-
-// 	orders, err := s.repository.LoadOrders()
-// 	if err != nil {
-// 		return changeOrder, fmt.Errorf("error reading all oreders %s: %v", id, err)
-// 	}
-
-// 	menu, err := s.menuService.repository.LoadMenuItems()
-// 	if err != nil {
-// 		return models.Order{}, err
-// 	}
-
-// 	err = utils.ValidateOrder(menu, changeOrder)
-// 	if err != nil {
-// 		return models.Order{}, err
-// 	}
-
-// 	for i := 0; i < len(orders); i++ {
-// 		if orders[i].ID == changeOrder.ID && changeOrder.Status == "closed" {
-// 			return models.Order{}, fmt.Errorf("order is closed")
-// 		}
-
-// 		if orders[i].ID == id {
-// 			orders[i].CustomerName = changeOrder.CustomerName
-// 			orders[i].CreatedAt = time.Now().UTC().Format(time.RFC3339)
-// 			orders[i].Items = changeOrder.Items
-// 			s.repository.SaveOrders(orders)
-
-// 			return orders[i], nil
-// 		}
-// 	}
-// 	return changeOrder, fmt.Errorf("order with ID %s not found", id)
-// }
+func (s OrderService) UpdateOrder(id int, changeOrder models.Order) (models.Order, error) {
+	order, err := s.orderRepo.UpdateOrder(id)
+	if err != nil {
+		return models.Order{}, err
+	}
+	return order, nil
+}
 
 func (s OrderService) CloseOrder(id int) (models.Order, error) {
 	order, err := s.orderRepo.CloseOrder(id)
@@ -146,79 +114,4 @@ func (s OrderService) CloseOrder(id int) (models.Order, error) {
 		return models.Order{}, err
 	}
 	return order, nil
-
-	// orders, err := s.repository.LoadOrders()
-	// if err != nil {
-	// 	return models.Order{}, fmt.Errorf("order with ID %s not found", id)
-	// }
-
-	// orderId, err := s.GetOrderByID(id)
-	// if err != nil {
-	// 	return models.Order{}, fmt.Errorf("failed to retrieve order by ID%s", id)
-	// }
-
-	// if orderId.Status == "closed" {
-	// 	return models.Order{}, fmt.Errorf("opration not allowed")
-	// }
-
-	// menu, err := s.menuService.repository.LoadMenuItems()
-	// if err != nil {
-	// 	return models.Order{}, err
-	// }
-
-	// menuMap := make(map[string]models.MenuItem)
-	// for _, items := range menu {
-	// 	menuMap[items.ID] = items
-	// }
-
-	// inventory, err := s.inventoryService.GetAllInventory()
-	// if err != nil {
-	// 	return models.Order{}, fmt.Errorf("failed to retrieve inventory")
-	// }
-
-	// var newDataMenu []models.MenuItem
-
-	// ingredientMap := make(map[string]models.InventoryItem)
-	// for _, items := range inventory {
-	// 	ingredientMap[items.IngredientID] = items
-	// }
-
-	// for _, items := range orderId.Items {
-	// 	for i := 0; i < items.Quantity; i++ {
-	// 		if item, exists := menuMap[items.ProductID]; exists {
-	// 			newDataMenu = append(newDataMenu, item)
-	// 		}
-	// 	}
-	// 	if err := utils.ValidateQuantity(float64(items.Quantity)); err != nil {
-	// 		return models.Order{}, err
-	// 	}
-	// }
-
-	// for _, items := range newDataMenu {
-	// 	for _, ingredient := range items.Ingredients {
-	// 		if item, exist := ingredientMap[ingredient.IngredientID]; exist {
-	// 			fmt.Printf("Checking ingredient ID: %v, required: %v, available: %v\n",
-	// 				ingredient.IngredientID, ingredient.Quantity, item.Quantity)
-	// 			if ingredient.Quantity > item.Quantity {
-	// 				return models.Order{}, fmt.Errorf("not enough quantity for ingredient ID %v: required %v, available %v", ingredient.IngredientID, ingredient.Quantity, item.Quantity)
-	// 			}
-	// 			item.Quantity -= ingredient.Quantity
-	// 			ingredientMap[ingredient.IngredientID] = item
-	// 		}
-	// 	}
-	// }
-
-	// for ingredientID, item := range ingredientMap {
-	// 	if _, err := s.inventoryService.UpdateInventoryItem(ingredientID, item); err != nil {
-	// 		return models.Order{}, fmt.Errorf("failed to update inventory for ingredientID %v", ingredientID)
-	// 	}
-	// }
-
-	// for i := 0; i < len(orders); i++ {
-	// 	if orders[i].ID == id {
-	// 		orders[i].Status = "closed"
-	// 		s.repository.SaveOrders(orders)
-	// 		return orders[i], nil
-	// 	}
-	// }
 }

@@ -94,27 +94,26 @@ func (h OrderHandler) HandleDeleteOrder(w http.ResponseWriter, r *http.Request, 
 	utils.ResponseInJSON(w, 204, nil)
 }
 
-// func (h OrderHandler) HandleUpdateOrder(w http.ResponseWriter, r *http.Request, orderID string) {
-// 	slog.Info("Received request to update order", "orderID", orderID)
+func (h OrderHandler) HandleUpdateOrder(w http.ResponseWriter, r *http.Request, orderID int) {
+	slog.Info("Received request to update order", "orderID", orderID)
 
-// 	var changeOrder models.Order
-// 	if err := json.NewDecoder(r.Body).Decode(&changeOrder); err != nil {
-// 		slog.Warn("Invalid JSON format", "error", err)
-// 		utils.ErrorInJSON(w, http.StatusBadRequest, err)
-// 		return
-// 	}
+	var changeOrder models.Order
+	if err := json.NewDecoder(r.Body).Decode(&changeOrder); err != nil {
+		slog.Warn("Invalid JSON format", "error", err)
+		utils.ErrorInJSON(w, http.StatusBadRequest, err)
+		return
+	}
 
-// 	order, err := h.orderService.UpdateOrder(orderID, changeOrder)
-// 	if err != nil {
-// 		slog.Warn("Failed to update order", "orderID", orderID, "error", err)
-// 		utils.ErrorInJSON(w, http.StatusNotFound, err)
-// 		return
-// 	} else {
-
-// 		slog.Info("Order updated successfully", "orderID", order.ID)
-// 		utils.ResponseInJSON(w, 200, order)
-// 	}
-// }
+	order, err := h.orderService.UpdateOrder(orderID, changeOrder)
+	if err != nil {
+		slog.Warn("Failed to update order", "orderID", orderID, "error", err)
+		utils.ErrorInJSON(w, http.StatusNotFound, err)
+		return
+	} else {
+		slog.Info("Order updated successfully", "orderID", order.ID)
+		utils.ResponseInJSON(w, 200, order)
+	}
+}
 
 func (h OrderHandler) HandleCloseOrder(w http.ResponseWriter, r *http.Request, orderID int) {
 	slog.Info("Received request to close order", "orderID", orderID)

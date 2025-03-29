@@ -114,19 +114,15 @@ func HandleRequestsOrders(orderHandler handler.OrderHandler) http.HandlerFunc {
 			} else {
 				http.Error(w, "Not Found", http.StatusNotFound)
 			}
+		case http.MethodPut:
+			if len(parts) == 2 {
+				orderHandler.HandleUpdateOrder(w, r, id)
+			} else {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+			}
 		default:
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		}
-
-		// case http.MethodPut:
-		// 	if len(parts) == 2 {
-		// 		orderHandler.HandleUpdateOrder(w, r, parts[1])
-		// 	} else {
-		// 		http.Error(w, "Bad Request", http.StatusBadRequest)
-		// 	}
-		// default:
-		// 	http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		// }
 	}
 }
 
