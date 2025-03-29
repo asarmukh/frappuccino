@@ -48,19 +48,18 @@ func (tm *TransactionManager) Rollback() {
 	}
 }
 
-// Exec выполняет SQL-запрос внутри транзакции
 func (tm *TransactionManager) Exec(query string, args ...interface{}) (sql.Result, error) {
-	return tm.tx.Exec(query, args...)
+	return tm.tx.Exec(query, args) // Unpack args using '...'
 }
 
 // QueryRow выполняет SQL-запрос, который возвращает одну строку
 func (tm *TransactionManager) QueryRow(query string, args ...interface{}) *sql.Row {
-	return tm.tx.QueryRow(query, args...)
+	return tm.tx.QueryRow(query, args)
 }
 
 // Query возвращает строки
 func (tm *TransactionManager) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	return tm.tx.Query(query, args...)
+	return tm.tx.Query(query, args)
 }
 
 // WithTransaction выполняет функцию внутри транзакции

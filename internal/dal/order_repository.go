@@ -252,8 +252,8 @@ func (r OrderRepository) CloseOrder(id int) (models.Order, error) {
 		return models.Order{}, errItem
 	}
 	defer rows.Close()
+	var item models.OrderItem
 	for rows.Next() {
-		var item models.OrderItem
 		if err := rows.Scan(&item.ProductID, &item.Quantity, &item.Price); err != nil {
 			return models.Order{}, err
 		}
@@ -263,26 +263,40 @@ func (r OrderRepository) CloseOrder(id int) (models.Order, error) {
 	if err := rows.Err(); err != nil {
 		return models.Order{}, err
 	}
+	// Загружаем все ингридиенты которые есть в позициях заказа
+	var ingredients []models.MenuItemIngredient
+	for _, item := range orderItems {
+		queryIngredients := `SELECT ingredient_id, quantity  FROM menu_item_ingredients WHERE menu_item_id = $1`
+		rows2, errIngredient := r.db.Query(queryIngredients, item.ProductID)
+		if errIngredient != nil {
+			return models.Order{}, errIngredient
+		}
+		defer rows2.Close()
+		var ingredient models.MenuItemIngredient
+		for rows2.Next() {
+			if err := rows2.Scan(&ingredient.IngredientID, &ingredient.Quantity); err != nil {
+				return models.Order{}, err
+			}
+			ingredients = append(ingredients, ingredient)
+		}
+
+		if err := rows2.Err(); err != nil {
+			return models.Order{}, err
+		}
+	}
 
 	tm := db.NewTransactionManager(r.db)
+
 	errTransact := tm.WithTransaction(func(tx *db.TransactionManager) error {
+		// Отнимаем ингредиенты из инвентаря
 		querySubsctruct := `UPDATE inventory SET quantity = quantity - $1 WHERE id = $2`
 
-		for _, item := range orderItems {
-			ingredienRows, err := tx.Query(querySubsctruct, item.Quantity)
+		for _, ingredient := range ingredients {
+			rowsIngredient, err := tx.Query(querySubsctruct, ingredient.Quantity, ingredient.IngredientID)
 			if err != nil {
 				return err
 			}
-			defer ingredienRows.Close()
-
-			for ingredienRows.Next() {
-				var ingredientID int
-				var requiredQuantity int
-				if err := ingredienRows.Scan(&ingredientID, &requiredQuantity); err != nil {
-					return err
-				}
-
-			}
+			defer rowsIngredient.Close()
 		}
 
 		queryClosing := `UPDATE orders SET status = $2, updated_at = NOW() WHERE id = $1`
@@ -300,7 +314,7 @@ func (r OrderRepository) CloseOrder(id int) (models.Order, error) {
 			return fmt.Errorf("order with ID %d not found", id)
 		}
 
-		return err
+		return nil
 	})
 	if errTransact != nil {
 		return models.Order{}, errTransact
