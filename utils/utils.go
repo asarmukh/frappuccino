@@ -184,6 +184,28 @@ func IsValidDir(dir string) bool {
 	return true
 }
 
+func ValidateSpecialInstructions(instructions map[string]string) error {
+	allowedKeys := map[string]bool{
+		"temperature": true,
+		"notes":       true,
+	}
+	for key := range instructions {
+		if !allowedKeys[key] {
+			return fmt.Errorf("invalid key in special_instructions: %s", key)
+		}
+	}
+	return nil
+}
+
+// Функция для преобразования special_instructions в map[string]string
+func ConvertSpecialInstructions(data string) (map[string]string, error) {
+	var result map[string]string
+	if err := json.Unmarshal([]byte(data), &result); err != nil {
+		return nil, fmt.Errorf("error unmarshaling special_instructions: %v", err)
+	}
+	return result, nil
+}
+
 // func ValidateOrder(menu []models.MenuItem, getOrder models.Order) error {
 // 	var idshki []string
 // 	for i := 0; i < len(menu); i++ {

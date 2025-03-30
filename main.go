@@ -41,7 +41,7 @@ func main() {
 	menuHandler := handler.NewMenuHandler(menuService)
 
 	orderRepo := dal.NewOrderPostgresRepository(db)
-	orderService := service.NewOrderService(orderRepo, menuService)
+	orderService := service.NewOrderService(orderRepo, menuRepo)
 	orderHandler := handler.NewOrderHandler(orderService)
 
 	setupRoutes(orderHandler, menuHandler, inventoryHandler)
@@ -127,6 +127,10 @@ func waitForDB(db *sql.DB) {
 
 func setupRoutes(orderHandler handler.OrderHandler, menuHandler handler.MenuHandler, inventoryHandler handler.InventoryHandler) {
 	http.HandleFunc("/orders", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("🔥 Request processed in /orders")
+		routes.HandleRequestsOrders(orderHandler)(w, r)
+	})
+	http.HandleFunc("/orders/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("🔥 Request processed in /orders")
 		routes.HandleRequestsOrders(orderHandler)(w, r)
 	})
