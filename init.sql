@@ -35,7 +35,7 @@ CREATE TABLE menu_items (
     price DECIMAL(10, 2) NOT NULL CHECK (price > 0),
     categories VARCHAR[],
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ 
 );
 
 CREATE TABLE orders (
@@ -54,7 +54,7 @@ CREATE TABLE inventory (
     quantity DECIMAL NOT NULL CHECK (quantity >= 0),
     unit VARCHAR(50) NOT NULL,
     reorder_threshold DECIMAL CHECK (reorder_threshold >= 0), -- Порог перезаказа
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ 
 );
 
 CREATE TABLE order_items (

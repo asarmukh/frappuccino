@@ -138,30 +138,46 @@ func HandleMenu(menuHandler handler.MenuHandler) http.HandlerFunc {
 			} else {
 				http.Error(w, "Not Found", http.StatusNotFound)
 			}
-		}
-		// case http.MethodGet:
-		// 	if len(parts) == 1 {
-		// 		menuHandler.HandleGetAllMenuItems(w, r)
-		// 	} else if len(parts) == 2 {
-		// 		menuHandler.HandleGetMenuItemById(w, r, parts[1])
-		// 	} else {
-		// 		http.Error(w, "Not Found", http.StatusNotFound)
-		// 	}
-		// case http.MethodPut:
-		// 	if len(parts) == 2 {
-		// 		menuHandler.HandleUpdateMenu(w, r, parts[1])
-		// 	} else {
-		// 		http.Error(w, "Not Found", http.StatusNotFound)
-		// 	}
-		// case http.MethodDelete:
-		// 	if len(parts) == 2 {
-		// 		menuHandler.HandleDeleteMenuItemById(w, r, parts[1])
-		// 	} else {
-		// 		http.Error(w, "Not Found", http.StatusNotFound)
-		// 	}
 
-		// default:
-		// 	http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		// }
+		case http.MethodGet:
+			if len(parts) == 1 {
+				menuHandler.HandleGetAllMenuItems(w, r)
+			} else if len(parts) == 2 {
+				id, err := strconv.Atoi(parts[1])
+				if err != nil {
+					http.Error(w, "Invalid menu ID", http.StatusBadRequest)
+					return
+				}
+				menuHandler.HandleGetMenuItemById(w, r, id)
+			} else {
+				http.Error(w, "Not Found", http.StatusNotFound)
+			}
+
+		case http.MethodPut:
+			if len(parts) == 2 {
+				id, err := strconv.Atoi(parts[1])
+				if err != nil {
+					http.Error(w, "Invalid menu ID", http.StatusBadRequest)
+					return
+				}
+				menuHandler.HandleUpdateMenu(w, r, id)
+			} else {
+				http.Error(w, "Not Found", http.StatusNotFound)
+			}
+		case http.MethodDelete:
+			if len(parts) == 2 {
+				id, err := strconv.Atoi(parts[1])
+				if err != nil {
+					http.Error(w, "Invalid menu ID", http.StatusBadRequest)
+					return
+				}
+				menuHandler.HandleDeleteMenuItemById(w, r, id)
+			} else {
+				http.Error(w, "Not Found", http.StatusNotFound)
+			}
+
+		default:
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		}
 	}
 }

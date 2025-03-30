@@ -37,7 +37,7 @@ func main() {
 	inventoryHandler := handler.NewInventoryHandler(inventoryService)
 
 	menuRepo := dal.NewMenuRepository(db)
-	menuService := service.NewMenuService(menuRepo, inventoryService)
+	menuService := service.NewMenuService(menuRepo)
 	menuHandler := handler.NewMenuHandler(menuService)
 
 	orderRepo := dal.NewOrderPostgresRepository(db)
@@ -136,6 +136,11 @@ func setupRoutes(orderHandler handler.OrderHandler, menuHandler handler.MenuHand
 	})
 
 	http.HandleFunc("/menu", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("🔥 Request processed in /menu")
+		routes.HandleMenu(menuHandler)(w, r)
+	})
+
+	http.HandleFunc("/menu/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("🔥 Request processed in /menu")
 		routes.HandleMenu(menuHandler)(w, r)
 	})
