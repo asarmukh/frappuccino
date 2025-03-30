@@ -323,17 +323,3 @@ func (r MenuRepository) UpdateMenu(id int, changeMenu models.MenuItem) (models.M
 
 	return existingItem, nil
 }
-
-func (r MenuRepository) ProductExists(productID int) (bool, error) {
-	query := `SELECT EXISTS(SELECT 1 FROM menu_items WHERE id = $1)`
-	var exists bool
-	err := r.db.QueryRow(query, productID).Scan(&exists)
-	return exists, err
-}
-
-func (r MenuRepository) GetProductPrice(productID int) (float64, error) {
-	query := `SELECT price FROM menu_items WHERE id = $1`
-	var price float64
-	err := r.db.QueryRow(query, productID).Scan(&price)
-	return price, err
-}
