@@ -52,14 +52,9 @@ func (s OrderService) CreateOrder(order models.Order) (models.Order, error) {
 	}
 
 	// Calculating the total amount of the order
-	totalAmount := 0.0
-	for i, product := range order.Items {
-		price, err := s.menuRepo.GetProductPrice(product.ProductID)
-		if err != nil {
-			return models.Order{}, err
-		}
-		order.Items[i].Price = price
-		totalAmount += price * float64(product.Quantity)
+	totalAmount, err := s.TotalAmount(order)
+	if err != nil {
+		return models.Order{}, err
 	}
 	order.TotalAmount = totalAmount
 
@@ -101,7 +96,33 @@ func (s OrderService) DeleteOrder(id int) error {
 }
 
 func (s OrderService) UpdateOrder(id int, changeOrder models.Order) (models.Order, error) {
-	order, err := s.orderRepo.UpdateOrder(id)
+	if err := utils.IsValidName(changeOrder.CustomerName); err != nil {
+		return models.Order{}, err
+	}
+
+	if err := utils.ValidateSpecialInstructions(changeOrder.SpecialInstructions); err != nil {
+		return models.Order{}, err
+	}
+
+	// Checking that all products exist on the menu
+	for _, product := range changeOrder.Items {
+		exists, err := s.menuRepo.ProductExists(product.ProductID)
+		if err != nil {
+			return models.Order{}, err
+		}
+		if !exists {
+			return models.Order{}, fmt.Errorf("product with ID %d not found", product.ProductID)
+		}
+	}
+
+	// Calculating the total amount of the order
+	totalAmount, err := s.TotalAmount(changeOrder)
+	if err != nil {
+		return models.Order{}, err
+	}
+	changeOrder.TotalAmount = totalAmount
+
+	order, err := s.orderRepo.UpdateOrder(id, changeOrder)
 	if err != nil {
 		return models.Order{}, err
 	}
@@ -114,4 +135,18 @@ func (s OrderService) CloseOrder(id int) (models.Order, error) {
 		return models.Order{}, err
 	}
 	return order, nil
+}
+
+func (s OrderService) TotalAmount(order models.Order) (float64, error) {
+	// Calculating the total amount of the order
+	totalAmount := 0.0
+	for i, product := range order.Items {
+		price, err := s.menuRepo.GetProductPrice(product.ProductID)
+		if err != nil {
+			return 0.0, err
+		}
+		order.Items[i].Price = price
+		totalAmount += price * float64(product.Quantity)
+	}
+	return totalAmount, nil
 }

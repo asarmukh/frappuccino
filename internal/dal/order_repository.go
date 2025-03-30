@@ -237,7 +237,81 @@ func (r OrderRepository) DeleteOrderByID(id int) error {
 	return nil
 }
 
-func (r OrderRepository) UpdateOrder(id int) (models.Order, error) {
+// Обновление заказа
+func (r OrderRepository) UpdateOrder(id int, changeOrder models.Order) (models.Order, error) {
+	var orderUpdated models.Order
+	var specialInstructionsJSON []byte
+
+	specialInstructionsBytes, err := json.Marshal(changeOrder.SpecialInstructions)
+	if err != nil {
+		return models.Order{}, fmt.Errorf("JSON marshaling error: %w", err)
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return models.Order{}, fmt.Errorf("transaction start error: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	queryUpdate := `
+        UPDATE orders 
+        SET name = $2, status = $3, total_amount = $4, special_instructions = $5::jsonb, updated_at = NOW() 
+        WHERE id = $1 
+        RETURNING *`
+	err = tx.QueryRow(queryUpdate, id, changeOrder.CustomerName, "updated", changeOrder.TotalAmount, specialInstructionsBytes).
+		Scan(&orderUpdated.ID, &orderUpdated.CustomerName, &orderUpdated.Status, &orderUpdated.TotalAmount, &specialInstructionsJSON, &orderUpdated.CreatedAt, &orderUpdated.UpdatedAt)
+	if err != nil {
+		return models.Order{}, fmt.Errorf("request execution error: %w", err)
+	}
+	// Декодирование JSON обратно в карту
+	err = json.Unmarshal(specialInstructionsJSON, &orderUpdated.SpecialInstructions)
+	if err != nil {
+		return models.Order{}, fmt.Errorf("JSON unmarshaling error: %w", err)
+	}
+
+	// Обновление позиций заказа
+	queryPrice := `SELECT price FROM menu_items WHERE id = $1`
+	queryUpdateItems := `UPDATE order_items SET quantity = $3, price = $4 WHERE order_id = $1 AND menu_item_id = $2`
+	for _, item := range changeOrder.Items {
+		err := tx.QueryRow(queryPrice, item.ProductID).Scan(&item.Price)
+		if err != nil {
+			return models.Order{}, fmt.Errorf("error getting a price: %w", err)
+		}
+
+		_, err = tx.Exec(queryUpdateItems, orderUpdated.ID, item.ProductID, item.Quantity, item.Price)
+		if err != nil {
+			return models.Order{}, fmt.Errorf("order Item Update Error: %w", err)
+		}
+	}
+
+	// Получение актуальных позиций заказа
+	queryItems := `SELECT menu_item_id, quantity, price FROM order_items WHERE order_id = $1`
+	rows, err := tx.Query(queryItems, orderUpdated.ID)
+	if err != nil {
+		return models.Order{}, fmt.Errorf("error receiving the list of items of the order: %w", err)
+	}
+	defer rows.Close()
+
+	var items []models.OrderItem
+	for rows.Next() {
+		var item models.OrderItem
+		if err := rows.Scan(&item.ProductID, &item.Quantity, &item.Price); err != nil {
+			return models.Order{}, fmt.Errorf("error when scanning products: %w", err)
+		}
+		items = append(items, item)
+	}
+	orderUpdated.Items = items
+
+	// Фиксация транзакции
+	if err := tx.Commit(); err != nil {
+		return models.Order{}, fmt.Errorf("transaction commit error: %w", err)
+	}
+
+	return orderUpdated, nil
 }
 
 func (r OrderRepository) CloseOrder(id int) (models.Order, error) {
