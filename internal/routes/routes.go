@@ -7,25 +7,25 @@ import (
 	"strings"
 )
 
-// func HandleRequestsReports(reportHandler handler.ReportHandler) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		path := strings.Trim(r.URL.Path, "/")
-// 		parts := strings.SplitN(path, "/", 2)
+func HandleRequestsReports(reportHandler handler.ReportHandler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		path := strings.Trim(r.URL.Path, "/")
+		parts := strings.SplitN(path, "/", 2)
 
-// 		switch r.Method {
-// 		case http.MethodGet:
-// 			if len(parts) == 2 && parts[1] == "total-sales" {
-// 				reportHandler.HandleGetTotalSales(w, r)
-// 			} else if len(parts) == 2 && parts[1] == "popular-items" {
-// 				reportHandler.HandleGetPopulatItem(w, r)
-// 			} else {
-// 				http.Error(w, "Not Found", http.StatusNotFound)
-// 			}
-// 		default:
-// 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-// 		}
-// 	}
-// }
+		switch r.Method {
+		case http.MethodGet:
+			if len(parts) == 2 && parts[1] == "total-sales" {
+				reportHandler.HandleGetTotalSales(w, r)
+				// } else if len(parts) == 2 && parts[1] == "popular-items" {
+				// 	reportHandler.HandleGetPopulatItem(w, r)
+			} else {
+				http.Error(w, "Not Found", http.StatusNotFound)
+			}
+		default:
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
 
 func HandleRequestsInventory(inventoryHandler handler.InventoryHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

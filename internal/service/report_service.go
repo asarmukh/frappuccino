@@ -1,43 +1,32 @@
 package service
 
-type ReportService struct {
-	menuService MenuService
-	orderSevice OrderService
+import (
+	"fmt"
+	"frappuccino/internal/dal"
+)
+
+type ReportServiceInterface interface {
+	GetTotalSales() (float64, error)
 }
 
-// func NewReportService(menuService MenuService, orderService OrderService) ReportService {
-// 	return ReportService{
-// 		menuService: menuService,
-// 		orderSevice: orderService,
-// 	}
-// }
+type ReportService struct {
+	// menuService MenuService
+	reportRepo dal.ReportRepository
+}
 
-// func (r ReportService) GetTotalSales() (float64, error) {
-// 	orders, err := r.orderSevice.GetAllOrders()
-// 	if err != nil {
-// 		return 0, fmt.Errorf("Failed to retrieve orders")
-// 	}
+func NewReportService(_reportRepo dal.ReportRepository) ReportService {
+	return ReportService{
+		reportRepo: _reportRepo,
+	}
+}
 
-// 	menuItems, err := r.menuService.GetAllMenuItems()
-// 	if err != nil {
-// 		return 0, fmt.Errorf("Failed to retrieve menu items")
-// 	}
-
-// 	totalSales := 0.0
-
-// 	for _, order := range orders {
-// 		for _, item := range order.Items {
-// 			for _, menuItem := range menuItems {
-// 				if item.ProductID == menuItem.ID {
-// 					fmt.Println(item.Quantity, menuItem.Price)
-// 					totalSales += float64(item.Quantity) * menuItem.Price
-// 				}
-// 			}
-// 		}
-// 	}
-
-// 	return totalSales, nil
-// }
+func (r ReportService) GetTotalSales() (float64, error) {
+	totalSales, err := r.reportRepo.TotalSales()
+	if err != nil {
+		return -1, fmt.Errorf("error getting total sales")
+	}
+	return totalSales, nil
+}
 
 // func (r ReportService) GetPopularItems() ([]models.MenuItem, error) {
 // 	orders, err := r.orderSevice.GetAllOrders()
