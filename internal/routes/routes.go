@@ -16,8 +16,8 @@ func HandleRequestsReports(reportHandler handler.ReportHandler) http.HandlerFunc
 		case http.MethodGet:
 			if len(parts) == 2 && parts[1] == "total-sales" {
 				reportHandler.HandleGetTotalSales(w, r)
-				// } else if len(parts) == 2 && parts[1] == "popular-items" {
-				// 	reportHandler.HandleGetPopulatItem(w, r)
+			} else if len(parts) == 2 && parts[1] == "popular-items" {
+				reportHandler.HandleGetPopularItems(w, r)
 			} else {
 				http.Error(w, "Not Found", http.StatusNotFound)
 			}

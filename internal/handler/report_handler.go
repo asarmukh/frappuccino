@@ -22,11 +22,11 @@ func NewReportHandler(reportService service.ReportService) ReportHandler {
 }
 
 func (h ReportHandler) HandleGetTotalSales(w http.ResponseWriter, r *http.Request) {
-	slog.Info("📊 Received request to get total sales")
+	slog.Info("Received request to get total sales")
 
 	totalSales, err := h.reportService.GetTotalSales()
 	if err != nil {
-		slog.Error("❌ Failed to fetch total sales from service", "error", err.Error())
+		slog.Error("Failed to fetch total sales from service", "error", err.Error())
 		http.Error(w, "Failed to retrieve total sales", http.StatusInternalServerError)
 		return
 	}
@@ -37,16 +37,16 @@ func (h ReportHandler) HandleGetTotalSales(w http.ResponseWriter, r *http.Reques
 	slog.Info("✅ Total sales response sent successfully", "total_sales", totalSales)
 }
 
-// func (h ReportHandler) HandleGetPopularItems(w http.ResponseWriter, r *http.Request) {
-// 	slog.Info("Received request to get popular items")
+func (h ReportHandler) HandleGetPopularItems(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Received request to get popular items")
 
-// 	popularItem, err := h.reportService.GetPopularItems()
-// 	if err != nil {
-// 		slog.Error("Error fetching popular item", "error", err)
-// 		http.Error(w, "Failed to retrieve popular item", http.StatusInternalServerError)
-// 	}
+	popularItems, err := h.reportService.GetPopularItems()
+	if err != nil {
+		slog.Error("Error fetching popular items", "error", err)
+		http.Error(w, "Failed to retrieve popular items", http.StatusInternalServerError)
+		return
+	}
 
-// 	utils.ResponseInJSON(w, 200, popularItem)
-
-// 	slog.Info("Popular item response sent successfully")
-// }
+	utils.ResponseInJSON(w, http.StatusOK, popularItems)
+	slog.Info("Popular items response sent successfully")
+}

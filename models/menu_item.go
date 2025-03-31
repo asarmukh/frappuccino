@@ -8,7 +8,6 @@ type MenuItem struct {
 	Description string               `json:"description"`
 	Price       float64              `json:"price"`
 	Categories  []string             `json:"categories,omitempty"`
-	Available   bool                 `json:"available"`
 	Ingredients []MenuItemIngredient `json:"ingredients"`
 	CreatedAt   time.Time            `json:"created_at"`
 	UpdatedAt   time.Time            `json:"updated_at"`
