@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	// "frappuccino/internal/db"
 	"frappuccino/models"
@@ -403,4 +404,9 @@ func (r OrderRepository) CloseOrder(id int) (models.Order, error) {
 	}
 
 	return order, nil
+}
+
+func (r OrderRepository) GetOrderedItemsCount(start, end time.Time) (models.Order, error) {
+	var orderedItems models.Order
+	return orderedItems, nil
 }
