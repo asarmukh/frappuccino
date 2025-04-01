@@ -8,6 +8,7 @@ import (
 
 type ReportServiceInterface interface {
 	GetTotalSales() (float64, error)
+	GetOrderedItemsByPeriod(period, month, year string) (interface{}, error)
 }
 
 type ReportService struct {
@@ -31,4 +32,23 @@ func (r ReportService) GetTotalSales() (float64, error) {
 
 func (s ReportService) GetPopularItems() ([]models.MenuItem, error) {
 	return s.reportRepo.GetPopularItems()
+}
+
+func (s ReportService) GetOrderedItemsByPeriod(period, month, year string) (interface{}, error) {
+	var orderedItems interface{}
+	var err error
+
+	if period == "day" {
+		orderedItems, err = s.reportRepo.GetOrderedItemsByDay(month, year)
+	} else if period == "month" {
+		orderedItems, err = s.reportRepo.GetOrderedItemsByMonth(year)
+	} else {
+		return nil, fmt.Errorf("invalid period parameter")
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting ordered items by period: %w", err)
+	}
+
+	return orderedItems, nil
 }
