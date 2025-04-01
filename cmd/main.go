@@ -32,7 +32,7 @@ func main() {
 	db := connectDB()
 	defer db.Close()
 
-	inventoryRepo := dal.NewInventoryPostgresRepository(db)
+	inventoryRepo := dal.NewInventoryRepository(db)
 	inventoryService := service.NewInventoryService(inventoryRepo)
 	inventoryHandler := handler.NewInventoryHandler(inventoryService)
 
@@ -40,11 +40,16 @@ func main() {
 	menuService := service.NewMenuService(menuRepo)
 	menuHandler := handler.NewMenuHandler(menuService)
 
-	orderRepo := dal.NewOrderPostgresRepository(db)
+	orderRepo := dal.NewOrderRepository(db)
 	orderService := service.NewOrderService(orderRepo, menuRepo)
 	orderHandler := handler.NewOrderHandler(orderService)
 
-	setupRoutes(orderHandler, menuHandler, inventoryHandler)
+	reportRepo := dal.NewReportRepository(db)
+	reportService := service.NewReportService(reportRepo)
+	reportHandler := handler.NewReportHandler(reportService)
+
+	mux := http.NewServeMux()
+	setupRoutes(mux, orderHandler, menuHandler, inventoryHandler, reportHandler)
 
 	if *port < 1 || *port > 65535 {
 		log.Fatal("Error port")
@@ -54,7 +59,7 @@ func main() {
 	addr := fmt.Sprintf(":%d", *port)
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      nil, // Использует уже настроенные маршруты
+		Handler:      mux, // Использует уже настроенные маршруты
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
@@ -125,37 +130,28 @@ func waitForDB(db *sql.DB) {
 	}
 }
 
-func setupRoutes(orderHandler handler.OrderHandler, menuHandler handler.MenuHandler, inventoryHandler handler.InventoryHandler) {
-	http.HandleFunc("/orders", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("🔥 Request processed in /orders")
-		routes.HandleRequestsOrders(orderHandler)(w, r)
-	})
-	http.HandleFunc("/orders/", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("🔥 Request processed in /orders")
-		routes.HandleRequestsOrders(orderHandler)(w, r)
-	})
+func setupRoutes(mux *http.ServeMux, orderHandler handler.OrderHandler, menuHandler handler.MenuHandler, inventoryHandler handler.InventoryHandler, reportHandler handler.ReportHandler) {
+	// Вспомогательная функция для логирования и обработки маршрутов
+	handleWithLog := func(path string, handlerFunc http.HandlerFunc) {
+		mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+			log.Printf("🔥 Request processed in %s\n", path)
+			handlerFunc(w, r)
+		})
+	}
 
-	http.HandleFunc("/menu", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("🔥 Request processed in /menu")
-		routes.HandleMenu(menuHandler)(w, r)
-	})
+	handleWithLog("/orders", routes.HandleRequestsOrders(orderHandler))
+	handleWithLog("/orders/", routes.HandleRequestsOrders(orderHandler))
 
-	http.HandleFunc("/menu/", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("🔥 Request processed in /menu")
-		routes.HandleMenu(menuHandler)(w, r)
-	})
+	handleWithLog("/menu", routes.HandleMenu(menuHandler))
+	handleWithLog("/menu/", routes.HandleMenu(menuHandler))
 
-	http.HandleFunc("/inventory", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("🔥 Request processed in /inventory")
-		routes.HandleRequestsInventory(inventoryHandler)(w, r)
-	})
+	handleWithLog("/inventory", routes.HandleRequestsInventory(inventoryHandler))
+	handleWithLog("/inventory/", routes.HandleRequestsInventory(inventoryHandler))
 
-	http.HandleFunc("/inventory/", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("🔥 Request processed in /inventory")
-		routes.HandleRequestsInventory(inventoryHandler)(w, r)
-	})
+	handleWithLog("/reports", routes.HandleRequestsReports(reportHandler))
+	handleWithLog("/reports/", routes.HandleRequestsReports(reportHandler))
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("🔥 Request for an unknown route:", r.URL.Path)
 		http.Error(w, "Page not found", http.StatusNotFound)
 	})

@@ -29,7 +29,9 @@ func ErrorInJSON(w http.ResponseWriter, statusCode int, err error) {
 func ResponseInJSON(w http.ResponseWriter, statusCode int, object interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(object)
+	if err := json.NewEncoder(w).Encode(object); err != nil {
+		http.Error(w, `{"error": "Failed to encode JSON"}`, http.StatusInternalServerError)
+	}
 }
 
 func ValidateMenuItem(menuItem models.MenuItem) error {
@@ -164,24 +166,6 @@ func IsValidName(name string) error {
 	}
 
 	return nil
-}
-
-func IsValidDir(dir string) bool {
-	if strings.Contains(dir, "./") {
-		return false
-	}
-	if strings.Contains(dir, "home/") {
-		return false
-	}
-	if strings.Contains(dir, "internal/") {
-		return false
-	}
-
-	if strings.Contains(dir, "main.go") {
-		return false
-	}
-
-	return true
 }
 
 func ValidateSpecialInstructions(instructions map[string]string) error {
