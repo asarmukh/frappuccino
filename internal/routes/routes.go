@@ -75,9 +75,11 @@ func HandleRequestsOrders(orderHandler handler.OrderHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := strings.Trim(r.URL.Path, "/")
 		parts := strings.Split(path, "/")
+
 		var id int
-		if len(parts) > 1 {
-			var err error
+		var err error
+
+		if len(parts) > 1 && parts[0] == "orders" && parts[1] != "numberOfOrderedItems" {
 			id, err = strconv.Atoi(parts[1])
 			if err != nil {
 				http.Error(w, "Invalid order ID", http.StatusBadRequest)
@@ -98,28 +100,31 @@ func HandleRequestsOrders(orderHandler handler.OrderHandler) http.HandlerFunc {
 		case http.MethodGet:
 			if len(parts) == 1 {
 				orderHandler.HandleGetAllOrders(w, r)
-			} else if len(parts) == 2 {
-				orderHandler.HandleGetOrderById(w, r, id)
 			} else if len(parts) == 2 && parts[0] == "orders" && parts[1] == "numberOfOrderedItems" {
 				startDate := r.URL.Query().Get("startDate")
 				endDate := r.URL.Query().Get("endDate")
 				orderHandler.HandleNumberOfOrderedItems(w, r, startDate, endDate)
 				return
+			} else if len(parts) == 2 {
+				orderHandler.HandleGetOrderById(w, r, id)
 			} else {
 				http.Error(w, "Not Found", http.StatusNotFound)
 			}
+
 		case http.MethodDelete:
 			if len(parts) == 2 {
 				orderHandler.HandleDeleteOrder(w, r, id)
 			} else {
 				http.Error(w, "Not Found", http.StatusNotFound)
 			}
+
 		case http.MethodPut:
 			if len(parts) == 2 {
 				orderHandler.HandleUpdateOrder(w, r, id)
 			} else {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 			}
+
 		default:
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		}

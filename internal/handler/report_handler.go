@@ -1,11 +1,10 @@
 package handler
 
 import (
-	"log/slog"
-	"net/http"
-
 	"frappuccino/internal/service"
 	"frappuccino/utils"
+	"log/slog"
+	"net/http"
 )
 
 type ReportHandlerInterface interface {

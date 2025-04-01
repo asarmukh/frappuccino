@@ -20,6 +20,7 @@ type OrderRepositoryInterface interface {
 	DeleteOrderByID(id int) error
 	UpdateOrder(id int) (models.Order, error)
 	CloseOrder(id int) (models.Order, error)
+	GetOrderedItemsCount(start, end time.Time) (map[string]int, error)
 }
 
 type OrderRepository struct {
@@ -406,7 +407,35 @@ func (r OrderRepository) CloseOrder(id int) (models.Order, error) {
 	return order, nil
 }
 
-func (r OrderRepository) GetOrderedItemsCount(start, end time.Time) (models.Order, error) {
-	var orderedItems models.Order
+func (r OrderRepository) GetOrderedItemsCount(start, end time.Time) (map[string]int, error) {
+	query := `
+		SELECT mi.name, SUM(oi.quantity) 
+		FROM order_items oi
+		JOIN menu_items mi ON oi.menu_item_id = mi.id
+		JOIN orders o ON oi.order_id = o.id
+		WHERE o.created_at BETWEEN $1 AND $2
+		GROUP BY mi.name;
+	`
+
+	rows, err := r.db.Query(query, start, end)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query ordered items count: %w", err)
+	}
+	defer rows.Close()
+
+	orderedItems := make(map[string]int)
+	for rows.Next() {
+		var itemName string
+		var quantity int
+		if err := rows.Scan(&itemName, &quantity); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		orderedItems[itemName] = quantity
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return orderedItems, nil
 }
