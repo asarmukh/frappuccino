@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	// "frappuccino/internal/db"
+	"frappuccino/internal/database"
 	"frappuccino/models"
 	"frappuccino/utils"
 	"log"
@@ -19,6 +21,7 @@ type OrderRepositoryInterface interface {
 	DeleteOrderByID(id int) error
 	UpdateOrder(id int) (models.Order, error)
 	CloseOrder(id int) (models.Order, error)
+	GetOrderedItemsCount(start, end time.Time) (map[string]int, error)
 }
 
 type OrderRepository struct {
@@ -364,43 +367,75 @@ func (r OrderRepository) CloseOrder(id int) (models.Order, error) {
 		}
 	}
 
-	// tm := db.NewTransactionManager(r.db)
-
-	// errTransact := tm.WithTransaction(func(tx *db.TransactionManager) error {
-	// Обновление инвентаря
-	querySubsctruct := `UPDATE inventory SET quantity = quantity - $1 WHERE id = $2`
-	for _, ingredient := range ingredients {
-		// Используем Exec, передавая элементы по одному
-		_, err := r.db.Exec(querySubsctruct, ingredient.Quantity, ingredient.IngredientID)
-		if err != nil {
-			return models.Order{}, fmt.Errorf("failed to update inventory: %v", err)
+	errTransact := database.WithTransaction(r.db, func(tx *sql.Tx) error {
+		// Обновление инвентаря
+		querySubsctruct := `UPDATE inventory SET quantity = quantity - $1 WHERE id = $2`
+		for _, ingredient := range ingredients {
+			// Используем Exec, передавая элементы по одному
+			_, err := tx.Exec(querySubsctruct, ingredient.Quantity, ingredient.IngredientID)
+			if err != nil {
+				return fmt.Errorf("failed to update inventory: %v", err)
+			}
 		}
+
+		queryClosing := `UPDATE orders SET status = $2, updated_at = NOW() WHERE id = $1`
+		result, err := tx.Exec(queryClosing, id, "closed")
+		if err != nil {
+			return fmt.Errorf("error while closing order: %v", err)
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("failed to get number of affected rows: %v", err)
+		}
+
+		if rowsAffected == 0 {
+			return fmt.Errorf("order with ID %d not found", id)
+		}
+
+		return nil
+	})
+	if errTransact != nil {
+		return models.Order{}, errTransact
 	}
 
-	queryClosing := `UPDATE orders SET status = $2, updated_at = NOW() WHERE id = $1`
-	result, err := r.db.Exec(queryClosing, id, "closed")
-	if err != nil {
-		return models.Order{}, fmt.Errorf("error while closing order: %v", err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return models.Order{}, fmt.Errorf("failed to get number of affected rows: %v", err)
-	}
-
-	if rowsAffected == 0 {
-		return models.Order{}, fmt.Errorf("order with ID %d not found", id)
-	}
-
-	// return  nil
-	// })
-	// if errTransact != nil {
-	// 	return models.Order{}, errTransact
-	// }
 	order, errLoad = r.LoadOrder(id)
 	if errLoad != nil {
 		return models.Order{}, errLoad
 	}
 
 	return order, nil
+}
+
+func (r OrderRepository) GetOrderedItemsCount(start, end time.Time) (map[string]int, error) {
+	query := `
+		SELECT mi.name, SUM(oi.quantity) 
+		FROM order_items oi
+		JOIN menu_items mi ON oi.menu_item_id = mi.id
+		JOIN orders o ON oi.order_id = o.id
+		WHERE o.created_at BETWEEN $1 AND $2
+		GROUP BY mi.name;
+	`
+
+	rows, err := r.db.Query(query, start, end)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query ordered items count: %w", err)
+	}
+	defer rows.Close()
+
+	orderedItems := make(map[string]int)
+	for rows.Next() {
+		var itemName string
+		var quantity int
+		if err := rows.Scan(&itemName, &quantity); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		orderedItems[itemName] = quantity
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return orderedItems, nil
 }

@@ -3,12 +3,15 @@ package dal
 import (
 	"database/sql"
 	"frappuccino/models"
+	"strings"
 
 	"github.com/lib/pq"
 )
 
 type ReportRepositoryInterface interface {
 	TotalSales() (float64, error)
+	GetPopularItems() ([]models.MenuItem, error)
+	SearchMenu(q string, minPrice int, maxPrice int) ([]models.MenuItem, error)
 }
 
 type ReportRepository struct {
@@ -106,4 +109,39 @@ func (r ReportRepository) GetPopularItems() ([]models.MenuItem, error) {
 	}
 
 	return popularItems, nil
+}
+
+func (r ReportRepository) SearchMenu(q string, minPrice int, maxPrice int) ([]models.MenuItem, error) {
+	// Разбиваем поисковый запрос на слова и подготавливаем их для SQL
+	words := strings.Fields(q)
+	for i, word := range words {
+		words[i] = "%" + word + "%"
+	}
+
+	// SQL-запрос без динамических аргументов
+	query := `
+		SELECT id, name, description, price
+		FROM menu_items
+		WHERE (name ILIKE ANY($1) OR description ILIKE ANY($1))
+		AND price BETWEEN $2 AND $3
+	`
+
+	// Выполняем запрос
+	rows, err := r.db.Query(query, pq.Array(words), minPrice, maxPrice)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Обрабатываем результаты
+	var items []models.MenuItem
+	for rows.Next() {
+		var item models.MenuItem
+		if err := rows.Scan(&item.ID, &item.Name, &item.Description, &item.Price); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+
+	return items, nil
 }
