@@ -25,7 +25,7 @@ type OrderRepository struct {
 	db *sql.DB
 }
 
-func NewOrderPostgresRepository(db *sql.DB) OrderRepository {
+func NewOrderRepository(db *sql.DB) OrderRepository {
 	return OrderRepository{db: db}
 }
 

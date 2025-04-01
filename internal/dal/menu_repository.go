@@ -44,9 +44,9 @@ func (r MenuRepository) AddMenuItem(menuItem models.MenuItem) (models.MenuItem, 
 	}()
 	categories := "{" + strings.Join(menuItem.Categories, ",") + "}"
 
-	query := `INSERT INTO menu_items (name, description, price, categories, available) 
-			  VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at`
-	err = tx.QueryRow(query, menuItem.Name, menuItem.Description, menuItem.Price, categories, menuItem.Available).
+	query := `INSERT INTO menu_items (name, description, price, categories) 
+			  VALUES ($1, $2, $3, $4) RETURNING id, created_at`
+	err = tx.QueryRow(query, menuItem.Name, menuItem.Description, menuItem.Price, categories).
 		Scan(&menuItem.ID, &menuItem.CreatedAt)
 	if err != nil {
 		return models.MenuItem{}, err
@@ -79,7 +79,7 @@ func (r MenuRepository) AddMenuItem(menuItem models.MenuItem) (models.MenuItem, 
 func (r MenuRepository) LoadMenuItems() ([]models.MenuItem, error) {
 	var menuItems []models.MenuItem
 
-	query := `SELECT id, name, description, price, categories, available, created_at
+	query := `SELECT id, name, description, price, categories, created_at
 		FROM menu_items`
 
 	rows, err := r.db.Query(query)
@@ -93,7 +93,7 @@ func (r MenuRepository) LoadMenuItems() ([]models.MenuItem, error) {
 		var categories string
 
 		if err := rows.Scan(&menuItem.ID, &menuItem.Name, &menuItem.Description, &menuItem.Price,
-			&categories, &menuItem.Available, &menuItem.CreatedAt); err != nil {
+			&categories, &menuItem.CreatedAt); err != nil {
 			return nil, fmt.Errorf("ошибка при сканировании строки меню: %v", err)
 		}
 
@@ -150,7 +150,7 @@ func (r MenuRepository) GetMenuItemByID(id int) (models.MenuItem, error) {
 	}
 	defer tx.Rollback()
 
-	query := `SELECT id, name, description, price, categories, available, created_at, updated_at
+	query := `SELECT id, name, description, price, categories, created_at, updated_at
 		FROM menu_items WHERE id = $1`
 	err = tx.QueryRow(query, id).Scan(
 		&menuItem.ID,
@@ -158,7 +158,6 @@ func (r MenuRepository) GetMenuItemByID(id int) (models.MenuItem, error) {
 		&menuItem.Description,
 		&menuItem.Price,
 		&categories,
-		&menuItem.Available,
 		&menuItem.CreatedAt,
 		&menuItem.UpdatedAt,
 	)

@@ -4,9 +4,9 @@ WORKDIR /app
 
 COPY . .
 
-RUN go build -o frappuccino .
+RUN go build -o frappuccino ./cmd
 
 EXPOSE 8080
 
 CMD ["./frappuccino"]
-# edit CMD command accordingly.?
+

@@ -19,7 +19,7 @@ type InventoryRepositoryPostgres struct {
 	db *sql.DB
 }
 
-func NewInventoryPostgresRepository(_db *sql.DB) InventoryRepositoryPostgres {
+func NewInventoryRepository(_db *sql.DB) InventoryRepositoryPostgres {
 	return InventoryRepositoryPostgres{db: _db}
 }
 
