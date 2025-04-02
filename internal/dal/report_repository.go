@@ -2,13 +2,22 @@ package dal
 
 import (
 	"database/sql"
+	"fmt"
 	"frappuccino/models"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/lib/pq"
 )
 
 type ReportRepositoryInterface interface {
 	TotalSales() (float64, error)
+	GetPopularItems() ([]models.MenuItem, error)
+	GetOrderedItemsByDay(month string) ([]models.OrderItemReport, error)
+	GetOrderedItemsByMonth(year string) ([]map[string]int, error)
+	SearchMenu(q string, minPrice int, maxPrice int) (models.SearchResult, error)
+	SearchOrders(q string, minPrice int, maxPrice int) (models.SearchResult, error)
 }
 
 type ReportRepository struct {
@@ -106,4 +115,160 @@ func (r ReportRepository) GetPopularItems() ([]models.MenuItem, error) {
 	}
 
 	return popularItems, nil
+}
+
+func (r *ReportRepository) GetOrderedItemsByDay(month string) ([]models.OrderItemReport, error) {
+	monthInt, err := time.Parse("January", month)
+	if err != nil {
+		return nil, err
+	}
+	monthNumber := int(monthInt.Month())
+
+	query := `
+        SELECT EXTRACT(DAY FROM created_at) AS day, COUNT(*) 
+        FROM orders 
+        WHERE EXTRACT(MONTH FROM created_at) = $1        
+        GROUP BY day
+        ORDER BY day;
+    `
+
+	rows, err := r.db.Query(query, monthNumber)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка выполнения запроса: %v", err)
+	}
+	defer rows.Close()
+
+	var result []models.OrderItemReport
+	for rows.Next() {
+		var day, count int
+		if err := rows.Scan(&day, &count); err != nil {
+			return nil, err
+		}
+
+		result = append(result, models.OrderItemReport{
+			Period: strconv.Itoa(day),
+			Count:  count,
+		})
+	}
+
+	return result, nil
+}
+
+func (r *ReportRepository) GetOrderedItemsByMonth(year int) ([]models.OrderItemReport, error) {
+	query := `
+        SELECT TO_CHAR(created_at, 'Month') AS month, COUNT(*) 
+        FROM orders 
+        WHERE EXTRACT(YEAR FROM created_at) = $1
+        GROUP BY month
+        ORDER BY MIN(created_at);
+    `
+
+	rows, err := r.db.Query(query, year)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка выполнения запроса: %v", err)
+	}
+	defer rows.Close()
+
+	var result []models.OrderItemReport
+	for rows.Next() {
+		var month string
+		var count int
+		if err := rows.Scan(&month, &count); err != nil {
+			return nil, err
+		}
+
+		result = append(result, models.OrderItemReport{
+			Period: month,
+			Count:  count,
+		})
+	}
+
+	return result, nil
+}
+
+func (r ReportRepository) SearchMenu(q string, minPrice int, maxPrice int) (models.SearchResult, error) {
+	words := strings.Fields(q)
+	for i, word := range words {
+		words[i] = "%" + word + "%"
+	}
+
+	query := `
+		SELECT id, name, description, price
+		FROM menu_items
+		WHERE (name ILIKE ANY($1) OR description ILIKE ANY($1))
+		AND price BETWEEN $2 AND $3
+	`
+
+	rows, err := r.db.Query(query, pq.Array(words), minPrice, maxPrice)
+	if err != nil {
+		return models.SearchResult{}, err
+	}
+	defer rows.Close()
+
+	var searchResult models.SearchResult
+
+	// Создаем алиас для анонимной структуры
+	type MenuItemType = struct {
+		ID          int     `json:"id"`
+		Name        string  `json:"name"`
+		Description string  `json:"description"`
+		Price       float64 `json:"price"`
+	}
+
+	for rows.Next() {
+		var item MenuItemType
+		if err := rows.Scan(&item.ID, &item.Name, &item.Description, &item.Price); err != nil {
+			return models.SearchResult{}, err
+		}
+		searchResult.MenuItems = append(searchResult.MenuItems, item)
+		searchResult.TotalMatches++
+	}
+
+	return searchResult, nil
+}
+
+func (r ReportRepository) SearchOrders(q string, minPrice int, maxPrice int) (models.SearchResult, error) {
+	words := strings.Fields(q)
+	for i, word := range words {
+		words[i] = "%" + word + "%"
+	}
+
+	queryOrders := `
+    SELECT o.id, o.name AS customer_name, 
+           array_agg(m.name) AS items, 
+           o.total_amount AS total
+    FROM orders o
+    JOIN order_items oi ON o.id = oi.order_id
+    JOIN menu_items m ON oi.menu_item_id = m.id
+    WHERE (o.name ILIKE ANY($1) OR m.name ILIKE ANY($1))
+    AND o.total_amount BETWEEN $2 AND $3
+    GROUP BY o.id;
+`
+
+	rows, err := r.db.Query(queryOrders, pq.Array(words), minPrice, maxPrice)
+	if err != nil {
+		return models.SearchResult{}, err
+	}
+	defer rows.Close()
+
+	var searchResult models.SearchResult
+
+	// Создаем алиас для анонимной структуры
+	type OrderType = struct {
+		ID           int      `json:"id"`
+		CustomerName string   `json:"customer_name"`
+		Items        []string `json:"items"`
+		Total        float64  `json:"total"`
+	}
+
+	for rows.Next() {
+		var order OrderType
+		if err := rows.Scan(&order.ID, &order.CustomerName, pq.Array(&order.Items), &order.Total); err != nil {
+			return models.SearchResult{}, err
+		}
+		searchResult.Orders = append(searchResult.Orders, order)
+		searchResult.TotalMatches++
+	}
+
+	return searchResult, nil
 }
