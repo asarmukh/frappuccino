@@ -6,12 +6,15 @@ import (
 	"frappuccino/utils"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 )
 
 type ReportHandlerInterface interface {
 	HandleGetTotalSales(w http.ResponseWriter, r *http.Request)
-	// HandleGetPopulatItem(w http.ResponseWriter, r *http.Request)
+	HandleGetPopularItems(w http.ResponseWriter, r *http.Request)
+	HandleSearch(w http.ResponseWriter, r *http.Request)
 	HandleGetOrderedItemsByPeriod(w http.ResponseWriter, r *http.Request)
 }
 
@@ -51,6 +54,45 @@ func (h ReportHandler) HandleGetPopularItems(w http.ResponseWriter, r *http.Requ
 
 	utils.ResponseInJSON(w, http.StatusOK, popularItems)
 	slog.Info("Popular items response sent successfully")
+}
+
+func (h ReportHandler) HandleSearch(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Received request to get search")
+
+	q := r.URL.Query().Get("q")
+	filterParam := r.URL.Query().Get("filter")
+	minPriceStr := r.URL.Query().Get("minPrice")
+	maxPriceStr := r.URL.Query().Get("maxPrice")
+
+	var filters []string
+	if filterParam != "" {
+		filters = strings.Split(filterParam, ",")
+	}
+
+	if q == "" {
+		utils.ErrorInJSON(w, http.StatusBadRequest, fmt.Errorf("search query string required"))
+		return
+	}
+
+	minPrice, err := strconv.Atoi(minPriceStr)
+	if err != nil {
+		minPrice = 0
+	}
+
+	maxPrice, err := strconv.Atoi(maxPriceStr)
+	if err != nil {
+		maxPrice = 100000
+	}
+
+	searchResult, err := h.reportService.Search(q, filters, minPrice, maxPrice)
+	if err != nil {
+		slog.Error("Error fetching search", "error", err)
+		utils.ErrorInJSON(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	utils.ResponseInJSON(w, http.StatusOK, searchResult)
+	slog.Info("Search response sent successfully")
 }
 
 func (h ReportHandler) HandleGetOrderedItemsByPeriod(w http.ResponseWriter, r *http.Request) {

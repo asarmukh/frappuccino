@@ -18,6 +18,8 @@ func HandleRequestsReports(reportHandler handler.ReportHandler) http.HandlerFunc
 				reportHandler.HandleGetTotalSales(w, r)
 			} else if len(parts) == 2 && parts[1] == "popular-items" {
 				reportHandler.HandleGetPopularItems(w, r)
+			} else if parts[1] == "search" {
+				reportHandler.HandleSearch(w, r)
 			} else if len(parts) == 2 && parts[1] == "orderedItemsByPeriod" {
 				reportHandler.HandleGetOrderedItemsByPeriod(w, r)
 			} else {
