@@ -11,7 +11,8 @@ import (
 type ReportRepositoryInterface interface {
 	TotalSales() (float64, error)
 	GetPopularItems() ([]models.MenuItem, error)
-	SearchMenu(q string, minPrice int, maxPrice int) ([]models.MenuItem, error)
+	SearchMenu(q string, minPrice int, maxPrice int) (models.SearchResult, error)
+	SearchOrders(q string, minPrice int, maxPrice int) (models.SearchResult, error)
 }
 
 type ReportRepository struct {
@@ -111,14 +112,12 @@ func (r ReportRepository) GetPopularItems() ([]models.MenuItem, error) {
 	return popularItems, nil
 }
 
-func (r ReportRepository) SearchMenu(q string, minPrice int, maxPrice int) ([]models.MenuItem, error) {
-	// Разбиваем поисковый запрос на слова и подготавливаем их для SQL
+func (r ReportRepository) SearchMenu(q string, minPrice int, maxPrice int) (models.SearchResult, error) {
 	words := strings.Fields(q)
 	for i, word := range words {
 		words[i] = "%" + word + "%"
 	}
 
-	// SQL-запрос без динамических аргументов
 	query := `
 		SELECT id, name, description, price
 		FROM menu_items
@@ -126,22 +125,76 @@ func (r ReportRepository) SearchMenu(q string, minPrice int, maxPrice int) ([]mo
 		AND price BETWEEN $2 AND $3
 	`
 
-	// Выполняем запрос
 	rows, err := r.db.Query(query, pq.Array(words), minPrice, maxPrice)
 	if err != nil {
-		return nil, err
+		return models.SearchResult{}, err
 	}
 	defer rows.Close()
 
-	// Обрабатываем результаты
-	var items []models.MenuItem
-	for rows.Next() {
-		var item models.MenuItem
-		if err := rows.Scan(&item.ID, &item.Name, &item.Description, &item.Price); err != nil {
-			return nil, err
-		}
-		items = append(items, item)
+	var searchResult models.SearchResult
+
+	// Создаем алиас для анонимной структуры
+	type MenuItemType = struct {
+		ID          int     `json:"id"`
+		Name        string  `json:"name"`
+		Description string  `json:"description"`
+		Price       float64 `json:"price"`
 	}
 
-	return items, nil
+	for rows.Next() {
+		var item MenuItemType
+		if err := rows.Scan(&item.ID, &item.Name, &item.Description, &item.Price); err != nil {
+			return models.SearchResult{}, err
+		}
+		searchResult.MenuItems = append(searchResult.MenuItems, item)
+		searchResult.TotalMatches++
+	}
+
+	return searchResult, nil
+}
+
+func (r ReportRepository) SearchOrders(q string, minPrice int, maxPrice int) (models.SearchResult, error) {
+	words := strings.Fields(q)
+	for i, word := range words {
+		words[i] = "%" + word + "%"
+	}
+
+	queryOrders := `
+    SELECT o.id, o.name AS customer_name, 
+           array_agg(m.name) AS items, 
+           o.total_amount AS total
+    FROM orders o
+    JOIN order_items oi ON o.id = oi.order_id
+    JOIN menu_items m ON oi.menu_item_id = m.id
+    WHERE (o.name ILIKE ANY($1) OR m.name ILIKE ANY($1))
+    AND o.total_amount BETWEEN $2 AND $3
+    GROUP BY o.id;
+`
+
+	rows, err := r.db.Query(queryOrders, pq.Array(words), minPrice, maxPrice)
+	if err != nil {
+		return models.SearchResult{}, err
+	}
+	defer rows.Close()
+
+	var searchResult models.SearchResult
+
+	// Создаем алиас для анонимной структуры
+	type OrderType = struct {
+		ID           int      `json:"id"`
+		CustomerName string   `json:"customer_name"`
+		Items        []string `json:"items"`
+		Total        float64  `json:"total"`
+	}
+
+	for rows.Next() {
+		var order OrderType
+		if err := rows.Scan(&order.ID, &order.CustomerName, pq.Array(&order.Items), &order.Total); err != nil {
+			return models.SearchResult{}, err
+		}
+		searchResult.Orders = append(searchResult.Orders, order)
+		searchResult.TotalMatches++
+	}
+
+	return searchResult, nil
 }

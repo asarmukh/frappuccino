@@ -68,7 +68,7 @@ func (h ReportHandler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if q == "" {
-		utils.ErrorInJSON(w, http.StatusBadRequest, fmt.Errorf("search query string required!"))
+		utils.ErrorInJSON(w, http.StatusBadRequest, fmt.Errorf("search query string required"))
 		return
 	}
 
@@ -81,8 +81,6 @@ func (h ReportHandler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		maxPrice = 100000
 	}
-
-	slog.Info("Min price: %d; Max price: %d; q: %s; filters: %v", minPrice, maxPrice, q, filters)
 
 	searchResult, err := h.reportService.Search(q, filters, minPrice, maxPrice)
 	if err != nil {

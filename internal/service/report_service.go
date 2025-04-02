@@ -37,34 +37,53 @@ func (s ReportService) GetPopularItems() ([]models.MenuItem, error) {
 }
 
 func (s ReportService) Search(q string, filters []string, minPrice int, maxPrice int) (models.SearchResult, error) {
+	slog.Info("Start search...", "query", q, "filters", filters, "minPrice", minPrice, "maxPrice", maxPrice)
 	var searchResult models.SearchResult
 	var hadError bool
 
 	// Если фильтры не заданы, ищем везде
 	if len(filters) == 0 {
 		filters = []string{"menu", "orders"}
+		slog.Info("No filters provided, searching in all categories")
 	}
 
 	for _, filter := range filters {
+		slog.Info("Processing filter", "filter", filter)
+
 		switch filter {
 		case "menu":
-			menuItems, err := s.reportRepo.SearchMenu(q, minPrice, maxPrice)
+			slog.Info("Searching in menu...")
+			searchMenu, err := s.reportRepo.SearchMenu(q, minPrice, maxPrice)
 			if err != nil {
 				slog.Error("Error searching menu", "error", err)
 				hadError = true
 				continue
 			}
-			searchResult.MenuItems = append(searchResult.MenuItems, menuItems...)
+			slog.Info("Menu search results", "totalMatches", searchMenu.TotalMatches, "items", len(searchMenu.MenuItems))
+			searchResult.TotalMatches += searchMenu.TotalMatches
+			searchResult.MenuItems = searchMenu.MenuItems
 
 		case "orders":
-			// Заглушка для orders, пока нет реализации
-			slog.Info("Orders search not implemented yet")
+			slog.Info("Searching in orders...")
+			searchOrders, err := s.reportRepo.SearchOrders(q, minPrice, maxPrice)
+			if err != nil {
+				slog.Error("Error searching orders", "error", err)
+				hadError = true
+				continue
+			}
+			slog.Info("Orders search results", "totalMatches", searchOrders.TotalMatches, "orders", len(searchOrders.Orders))
+			searchResult.TotalMatches += searchOrders.TotalMatches
+			searchResult.Orders = searchOrders.Orders
+		default:
+			slog.Warn("Unknown filter, skipping", "filter", filter)
 		}
 	}
 
 	if hadError {
+		slog.Error("Search completed with errors, check previous logs")
 		return searchResult, fmt.Errorf("some errors occurred during search, check logs")
 	}
 
+	slog.Info("Search completed successfully", "totalMatches", searchResult.TotalMatches)
 	return searchResult, nil
 }
