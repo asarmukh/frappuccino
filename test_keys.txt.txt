@@ -16,11 +16,11 @@
     "price": 3.50,
     "ingredients": [
       {
-        "ingredient_id": 2,
+        "ingredient_id": 22,
         "quantity": 1
       },
       {
-        "ingredient_id": 1,
+        "ingredient_id": 21,
         "quantity": 200
       }
     ]
@@ -30,8 +30,8 @@
   "customer_name": "John Doe",
   "items": [
     {
-      "product_id": 1,
-      "quantity": 2
+      "product_id": 11,
+      "quantity": 1
     }
   ]
 }

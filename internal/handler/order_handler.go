@@ -19,6 +19,7 @@ type OrderHandlerInterface interface {
 	HandleUpdateOrder(w http.ResponseWriter, r *http.Request, orderID int)
 	HandleCloseOrder(w http.ResponseWriter, r *http.Request, orderID int)
 	HandleNumberOfOrderedItems(w http.ResponseWriter, r *http.Request, startDate, endDate string)
+	HandleBulkOrder(w http.ResponseWriter, r *http.Request)
 }
 
 type OrderHandler struct {
@@ -119,7 +120,8 @@ func (h OrderHandler) HandleUpdateOrder(w http.ResponseWriter, r *http.Request, 
 func (h OrderHandler) HandleCloseOrder(w http.ResponseWriter, r *http.Request, orderID int) {
 	slog.Info("Received request to close order", "orderID", orderID)
 
-	order, err := h.orderService.CloseOrder(orderID)
+	order, inventoryUpdates, err := h.orderService.CloseOrder(orderID)
+	fmt.Println(inventoryUpdates)
 	if err != nil {
 		slog.Warn("Failed to close order", "orderID", orderID, "error", err)
 		utils.ErrorInJSON(w, http.StatusNotFound, err)
@@ -142,4 +144,34 @@ func (h OrderHandler) HandleNumberOfOrderedItems(w http.ResponseWriter, r *http.
 
 	slog.Info("Number of ordered items retrieved successfully", "startDate", startDate, "endDate", endDate)
 	utils.ResponseInJSON(w, http.StatusOK, orderedItems)
+}
+
+func (h OrderHandler) HandleBulkOrder(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Received request to Bulk Order Processing")
+
+	var bulkOrderRequest models.BulkOrderRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&bulkOrderRequest); err != nil {
+		slog.Warn("Invalid JSON format", "error", err)
+		utils.ErrorInJSON(w, http.StatusBadRequest, fmt.Errorf("invalid JSON format: %v", err))
+		return
+	}
+
+	for _, order := range bulkOrderRequest.Orders {
+		if order.Status != "" {
+			utils.ErrorInJSON(w, http.StatusBadRequest, errors.New("invalid request body: status must be empty"))
+			return
+		}
+	}
+
+	// Передаём список заказов в сервис
+	bulkOrders, err := h.orderService.CreateBulkOrder(bulkOrderRequest.Orders)
+	if err != nil {
+		slog.Error("Failed to create bulk orders", "error", err)
+		utils.ErrorInJSON(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	slog.Info("✔ Bulk orders created successfully")
+	utils.ResponseInJSON(w, http.StatusCreated, bulkOrders)
 }

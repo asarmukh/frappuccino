@@ -83,7 +83,7 @@ func HandleRequestsOrders(orderHandler handler.OrderHandler) http.HandlerFunc {
 		var id int
 		var err error
 
-		if len(parts) > 1 && parts[0] == "orders" && parts[1] != "numberOfOrderedItems" {
+		if len(parts) > 1 && parts[0] == "orders" && parts[1] != "numberOfOrderedItems" && parts[1] != "batch-process" {
 			id, err = strconv.Atoi(parts[1])
 			if err != nil {
 				http.Error(w, "Invalid order ID", http.StatusBadRequest)
@@ -97,6 +97,8 @@ func HandleRequestsOrders(orderHandler handler.OrderHandler) http.HandlerFunc {
 				orderHandler.HandleCreateOrder(w, r)
 			} else if len(parts) == 3 && parts[2] == "close" {
 				orderHandler.HandleCloseOrder(w, r, id)
+			} else if len(parts) == 2 && parts[1] == "batch-process" {
+				orderHandler.HandleBulkOrder(w, r)
 			} else {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 			}

@@ -7,6 +7,7 @@ import (
 	"frappuccino/utils"
 	"log"
 	"log/slog"
+	"strings"
 	"time"
 )
 
@@ -16,7 +17,12 @@ type OrderServiceInterface interface {
 	GetOrderByID(id int) (models.Order, error)
 	DeleteOrder(id int) error
 	UpdateOrder(id int) (models.Order, error)
-	CloseOrder(id int) (models.Order, error)
+	CloseOrder(id int) (models.Order, []struct {
+		IngredientID int     `json:"ingredient_id"`
+		Name         string  `json:"name"`
+		QuantityUsed float64 `json:"quantity_used"`
+		Remaining    float64 `json:"remaining"`
+	}, error)
 	GetNumberOfOrderedItems(startDate, endDate string) (map[string]int, error)
 }
 
@@ -131,12 +137,17 @@ func (s OrderService) UpdateOrder(id int, changeOrder models.Order) (models.Orde
 	return order, nil
 }
 
-func (s OrderService) CloseOrder(id int) (models.Order, error) {
-	order, err := s.orderRepo.CloseOrder(id)
+func (s OrderService) CloseOrder(id int) (models.Order, []struct {
+	IngredientID int     `json:"ingredient_id"`
+	Name         string  `json:"name"`
+	QuantityUsed float64 `json:"quantity_used"`
+	Remaining    float64 `json:"remaining"`
+}, error) {
+	order, inventoryUpdates, err := s.orderRepo.CloseOrder(id)
 	if err != nil {
-		return models.Order{}, err
+		return models.Order{}, nil, err
 	}
-	return order, nil
+	return order, inventoryUpdates, nil
 }
 
 func (s OrderService) GetNumberOfOrderedItems(startDate, endDate string) (map[string]int, error) {
@@ -182,4 +193,80 @@ func (s OrderService) TotalAmount(order models.Order) (float64, error) {
 		totalAmount += price * float64(product.Quantity)
 	}
 	return totalAmount, nil
+}
+
+// оптовые заказы
+func (s OrderService) CreateBulkOrder(orders []models.Order) (models.BulkOrderResponse, error) {
+	var newOrders []models.Order
+	var bulkOrder models.BulkOrderResponse
+	var totalRevenue float64
+	var acceptedCount, rejectedCount int
+
+	// создаём новые заказы
+	for _, order := range orders {
+		newOrder, err := s.CreateOrder(order)
+		if err != nil {
+			return models.BulkOrderResponse{}, err
+		}
+		newOrders = append(newOrders, newOrder)
+	}
+
+	// закрываем новые заказы и списываем инвентарь
+	for _, newOrder := range newOrders {
+		closedOrder, usedIngredients, err := s.CloseOrder(newOrder.ID)
+
+		// Создаём объект processedOrder для каждого заказа
+		processedOrder := struct {
+			ID           int     `json:"order_id"`
+			CustomerName string  `json:"customer_name"`
+			Status       string  `json:"status"`
+			TotalAmount  float64 `json:"total,omitempty"`
+			Reason       string  `json:"reason,omitempty"`
+		}{
+			ID:           newOrder.ID,
+			CustomerName: newOrder.CustomerName,
+		}
+
+		if err != nil {
+			if strings.Contains(err.Error(), "insufficient inventory") {
+				processedOrder.Status = "rejected"
+				processedOrder.Reason = "insufficient_inventory"
+				rejectedCount++
+			} else {
+				return models.BulkOrderResponse{}, err
+			}
+		} else {
+			processedOrder.Status = "accepted"
+			processedOrder.TotalAmount = closedOrder.TotalAmount
+			totalRevenue += closedOrder.TotalAmount
+			acceptedCount++
+		}
+
+		// Агрегация использованных ингредиентов
+
+		for _, ingredient := range usedIngredients {
+			inventoryUpdates := struct {
+				IngredientID int     `json:"ingredient_id"`
+				Name         string  `json:"name"`
+				QuantityUsed float64 `json:"quantity_used"`
+				Remaining    float64 `json:"remaining"`
+			}{
+				IngredientID: ingredient.IngredientID,
+				Name:         ingredient.Name,
+				QuantityUsed: ingredient.QuantityUsed,
+				Remaining:    ingredient.QuantityUsed,
+			}
+			bulkOrder.Summary.InventoryUpdates = append(bulkOrder.Summary.InventoryUpdates, inventoryUpdates)
+		}
+
+		bulkOrder.ProcessedOrders = append(bulkOrder.ProcessedOrders, processedOrder)
+	}
+
+	// Заполняем итог
+	bulkOrder.Summary.TotalOrders = len(orders)
+	bulkOrder.Summary.Accepted = acceptedCount
+	bulkOrder.Summary.Rejected = rejectedCount
+	bulkOrder.Summary.TotalRevenue = totalRevenue
+
+	return bulkOrder, nil
 }
