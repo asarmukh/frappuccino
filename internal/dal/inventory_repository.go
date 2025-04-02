@@ -13,6 +13,7 @@ type InventoryRepositoryInterface interface {
 	GetInventoryItemByID(id int) (models.InventoryItem, error)
 	DeleteInventoryItemByID(id int) error
 	UpdateInventoryItem(inventoryItemID int, changedInventoryItem models.InventoryItem) (models.InventoryItem, error)
+	GetLeftovers(sortBy string, page, pageSize int) ([]models.InventoryItem, int, error)
 }
 
 type InventoryRepositoryPostgres struct {
@@ -205,4 +206,46 @@ func (r InventoryRepositoryPostgres) UpdateInventoryItem(inventoryItemID int, ch
 	}
 
 	return existingItem, nil
+}
+
+func (r InventoryRepositoryPostgres) GetLeftovers(sortBy string, page, pageSize int) ([]models.InventoryItem, int, error) {
+	validSortColumns := map[string]string{
+		"quantity": "quantity",
+	}
+	sortColumn, ok := validSortColumns[sortBy]
+	if !ok {
+		sortColumn = "quantity" // Default sorting by quantity
+	}
+
+	offset := (page - 1) * pageSize
+
+	query := fmt.Sprintf(`
+	 SELECT id, ingredient_name, quantity, unit, reorder_threshold FROM inventory 
+	 ORDER BY %s DESC 
+	 LIMIT $1 OFFSET $2
+	`, sortColumn)
+
+	rows, err := r.db.Query(query, pageSize, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var items []models.InventoryItem
+	for rows.Next() {
+		var item models.InventoryItem
+		err := rows.Scan(&item.IngredientID, &item.Name, &item.Quantity, &item.Unit, &item.ReorderThreshold)
+		if err != nil {
+			return nil, 0, err
+		}
+		items = append(items, item)
+	}
+
+	var totalCount int
+	err = r.db.QueryRow("SELECT COUNT(*) FROM inventory").Scan(&totalCount)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return items, totalCount, nil
 }
