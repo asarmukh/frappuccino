@@ -7,6 +7,7 @@ import (
 	"frappuccino/utils"
 	"log"
 	"log/slog"
+	"time"
 )
 
 type OrderServiceInterface interface {
@@ -16,6 +17,7 @@ type OrderServiceInterface interface {
 	DeleteOrder(id int) error
 	UpdateOrder(id int) (models.Order, error)
 	CloseOrder(id int) (models.Order, error)
+	GetNumberOfOrderedItems(startDate, endDate string) (map[string]int, error)
 }
 
 type OrderService struct {
@@ -135,6 +137,37 @@ func (s OrderService) CloseOrder(id int) (models.Order, error) {
 		return models.Order{}, err
 	}
 	return order, nil
+}
+
+func (s OrderService) GetNumberOfOrderedItems(startDate, endDate string) (map[string]int, error) {
+	var start time.Time
+	var end time.Time
+	var err error
+
+	if startDate != "" {
+		start, err = time.Parse("2006-01-02", startDate)
+		if err != nil {
+			return nil, fmt.Errorf("invalid startDate format, expected YYYY-MM-DD: %w", err)
+		}
+	} else {
+		start = time.Time{}
+	}
+
+	if endDate != "" {
+		end, err = time.Parse("2006-01-02", endDate)
+		if err != nil {
+			return nil, fmt.Errorf("invalid endDate format, expected YYYY-MM-DD: %w", err)
+		}
+	} else {
+		end = time.Now()
+	}
+
+	orderedItems, err := s.orderRepo.GetOrderedItemsCount(start, end)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve ordered items: %w", err)
+	}
+
+	return orderedItems, nil
 }
 
 func (s OrderService) TotalAmount(order models.Order) (float64, error) {

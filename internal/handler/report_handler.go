@@ -8,12 +8,14 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type ReportHandlerInterface interface {
 	HandleGetTotalSales(w http.ResponseWriter, r *http.Request)
 	HandleGetPopularItems(w http.ResponseWriter, r *http.Request)
 	HandleSearch(w http.ResponseWriter, r *http.Request)
+	HandleGetOrderedItemsByPeriod(w http.ResponseWriter, r *http.Request)
 }
 
 type ReportHandler struct {
@@ -91,4 +93,43 @@ func (h ReportHandler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 
 	utils.ResponseInJSON(w, http.StatusOK, searchResult)
 	slog.Info("Search response sent successfully")
+}
+
+func (h ReportHandler) HandleGetOrderedItemsByPeriod(w http.ResponseWriter, r *http.Request) {
+	period := r.URL.Query().Get("period")
+	month := r.URL.Query().Get("month")
+	year := r.URL.Query().Get("year")
+
+	if period == "" {
+		http.Error(w, "Period is required", http.StatusBadRequest)
+		return
+	}
+
+	if period == "day" {
+		if month == "" {
+			month = time.Now().Month().String()
+		}
+		if year == "" {
+			year = fmt.Sprintf("%d", time.Now().Year())
+		}
+	} else if period == "month" {
+		if year == "" {
+			year = fmt.Sprintf("%d", time.Now().Year())
+		}
+	}
+
+	orderedItems, err := h.reportService.GetOrderedItemsByPeriod(period, month, year)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to retrieve ordered items: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"period":       period,
+		"month":        month,
+		"year":         year,
+		"orderedItems": orderedItems,
+	}
+
+	utils.ResponseInJSON(w, http.StatusOK, response)
 }

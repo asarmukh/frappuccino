@@ -7,6 +7,8 @@ import (
 	"frappuccino/models"
 	"log"
 	"strings"
+
+	"github.com/lib/pq"
 )
 
 type MenuRepositoryInterface interface {
@@ -90,15 +92,10 @@ func (r MenuRepository) LoadMenuItems() ([]models.MenuItem, error) {
 
 	for rows.Next() {
 		var menuItem models.MenuItem
-		var categories string
 
 		if err := rows.Scan(&menuItem.ID, &menuItem.Name, &menuItem.Description, &menuItem.Price,
-			&categories, &menuItem.CreatedAt); err != nil {
+			pq.Array(&menuItem.Categories), &menuItem.CreatedAt); err != nil {
 			return nil, fmt.Errorf("ошибка при сканировании строки меню: %v", err)
-		}
-
-		if categories != "" {
-			menuItem.Categories = strings.Split(categories, ",")
 		}
 
 		ingredientsQuery := `SELECT ingredient_id, quantity FROM menu_item_ingredients WHERE menu_item_id = $1`
@@ -142,7 +139,6 @@ func (r MenuRepository) LoadMenuItems() ([]models.MenuItem, error) {
 
 func (r MenuRepository) GetMenuItemByID(id int) (models.MenuItem, error) {
 	var menuItem models.MenuItem
-	var categories string
 
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -157,14 +153,10 @@ func (r MenuRepository) GetMenuItemByID(id int) (models.MenuItem, error) {
 		&menuItem.Name,
 		&menuItem.Description,
 		&menuItem.Price,
-		&categories,
+		pq.Array(&menuItem.Categories),
 		&menuItem.CreatedAt,
 		&menuItem.UpdatedAt,
 	)
-
-	if categories != "" {
-		menuItem.Categories = strings.Split(categories, ",")
-	}
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -254,7 +246,6 @@ func (r MenuRepository) UpdateMenu(id int, changeMenu models.MenuItem) (models.M
 	defer tx.Rollback()
 
 	var existingItem models.MenuItem
-	var categories string
 
 	query := `SELECT id, name, description, price, categories FROM menu_items WHERE id = $1`
 	err = tx.QueryRow(query, id).Scan(
@@ -262,7 +253,7 @@ func (r MenuRepository) UpdateMenu(id int, changeMenu models.MenuItem) (models.M
 		&existingItem.Name,
 		&existingItem.Description,
 		&existingItem.Price,
-		&categories,
+		pq.Array(&existingItem.Categories),
 	)
 
 	if err != nil {
@@ -282,21 +273,17 @@ func (r MenuRepository) UpdateMenu(id int, changeMenu models.MenuItem) (models.M
 		changeMenu.Name,
 		changeMenu.Description,
 		changeMenu.Price,
-		categories,
+		pq.Array(&changeMenu.Categories),
 		id,
 	).Scan(
 		&existingItem.ID,
 		&existingItem.Name,
 		&existingItem.Description,
 		&existingItem.Price,
-		&categories,
+		pq.Array(&existingItem.Categories),
 		&existingItem.CreatedAt,
 		&existingItem.UpdatedAt,
 	)
-
-	if categories != "" {
-		existingItem.Categories = strings.Split(categories, ",")
-	}
 
 	for _, ingredient := range changeMenu.Ingredients {
 		queryUpdateIngredients := `UPDATE menu_item_ingredients 

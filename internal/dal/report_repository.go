@@ -2,8 +2,10 @@ package dal
 
 import (
 	"database/sql"
+	"fmt"
 	"frappuccino/models"
 	"strings"
+	"time"
 
 	"github.com/lib/pq"
 )
@@ -11,6 +13,8 @@ import (
 type ReportRepositoryInterface interface {
 	TotalSales() (float64, error)
 	GetPopularItems() ([]models.MenuItem, error)
+	GetOrderedItemsByDay(month, year string) ([]map[string]int, error)
+	GetOrderedItemsByMonth(year string) ([]map[string]int, error)
 	SearchMenu(q string, minPrice int, maxPrice int) (models.SearchResult, error)
 	SearchOrders(q string, minPrice int, maxPrice int) (models.SearchResult, error)
 }
@@ -110,6 +114,88 @@ func (r ReportRepository) GetPopularItems() ([]models.MenuItem, error) {
 	}
 
 	return popularItems, nil
+}
+
+func (r ReportRepository) GetOrderedItemsByDay(month, year string) ([]map[string]int, error) {
+	if month == "" {
+		month = time.Now().Month().String() // Get the current month name
+	}
+
+	if year == "" {
+		year = fmt.Sprintf("%d", time.Now().Year()) // Get the current year
+	}
+
+	// Convert month to title case to ensure it matches PostgreSQL's output format
+	month = strings.Title(month)
+
+	query := `
+        SELECT EXTRACT(DAY FROM o.created_at) AS day, SUM(oi.quantity) AS quantity
+        FROM order_items oi
+        JOIN orders o ON oi.order_id = o.id
+        WHERE TO_CHAR(o.created_at, 'Month') = $1
+        AND EXTRACT(YEAR FROM o.created_at) = $2
+        GROUP BY EXTRACT(DAY FROM o.created_at)
+        ORDER BY day;
+    `
+
+	rows, err := r.db.Query(query, month, year)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query ordered items by day: %w", err)
+	}
+	defer rows.Close()
+
+	var orderedItems []map[string]int
+	for rows.Next() {
+		var day int
+		var quantity int
+		if err := rows.Scan(&day, &quantity); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		orderedItems = append(orderedItems, map[string]int{fmt.Sprintf("%d", day): quantity})
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return orderedItems, nil
+}
+
+func (r ReportRepository) GetOrderedItemsByMonth(year string) ([]map[string]int, error) {
+	if year == "" {
+		year = fmt.Sprintf("%d", time.Now().Year())
+	}
+
+	query := `
+		SELECT TO_CHAR(o.created_at, 'Month') AS month, SUM(oi.quantity) AS quantity
+		FROM order_items oi
+		JOIN orders o ON oi.order_id = o.id
+		WHERE EXTRACT(YEAR FROM o.created_at) = $1
+		GROUP BY TO_CHAR(o.created_at, 'Month')
+		ORDER BY EXTRACT(MONTH FROM o.created_at);
+	`
+
+	rows, err := r.db.Query(query, year)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query ordered items by month: %w", err)
+	}
+	defer rows.Close()
+
+	var orderedItems []map[string]int
+	for rows.Next() {
+		var month string
+		var quantity int
+		if err := rows.Scan(&month, &quantity); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		orderedItems = append(orderedItems, map[string]int{month: quantity})
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return orderedItems, nil
 }
 
 func (r ReportRepository) SearchMenu(q string, minPrice int, maxPrice int) (models.SearchResult, error) {

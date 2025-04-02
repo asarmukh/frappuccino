@@ -18,6 +18,7 @@ type OrderHandlerInterface interface {
 	HandleDeleteOrder(w http.ResponseWriter, r *http.Request, orderID int)
 	HandleUpdateOrder(w http.ResponseWriter, r *http.Request, orderID int)
 	HandleCloseOrder(w http.ResponseWriter, r *http.Request, orderID int)
+	HandleNumberOfOrderedItems(w http.ResponseWriter, r *http.Request, startDate, endDate string)
 }
 
 type OrderHandler struct {
@@ -127,4 +128,18 @@ func (h OrderHandler) HandleCloseOrder(w http.ResponseWriter, r *http.Request, o
 		slog.Info("Order closed successfully", "orderID", order.ID)
 		utils.ResponseInJSON(w, 200, order)
 	}
+}
+
+func (h OrderHandler) HandleNumberOfOrderedItems(w http.ResponseWriter, r *http.Request, startDate, endDate string) {
+	slog.Info("Received request to get number of ordered items", "startDate", startDate, "endDate", endDate)
+
+	orderedItems, err := h.orderService.GetNumberOfOrderedItems(startDate, endDate)
+	if err != nil {
+		slog.Warn("Failed to retrieve number of ordered items", "startDate", startDate, "endDate", endDate, "error", err)
+		utils.ErrorInJSON(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	slog.Info("Number of ordered items retrieved successfully", "startDate", startDate, "endDate", endDate)
+	utils.ResponseInJSON(w, http.StatusOK, orderedItems)
 }
