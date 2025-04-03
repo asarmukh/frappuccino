@@ -8,6 +8,7 @@ import (
 	"frappuccino/utils"
 	"log/slog"
 	"net/http"
+	"strconv"
 )
 
 type InventoryHandlerInterface interface {
@@ -16,6 +17,7 @@ type InventoryHandlerInterface interface {
 	HandleGetInventoryById(w http.ResponseWriter, r *http.Request, id string)
 	HandleDeleteInventoryItem(w http.ResponseWriter, r *http.Request, inventoryItemID string)
 	HandleUpdateInventoryItem(w http.ResponseWriter, r *http.Request, inventoryItemID string)
+	HandleGetLeftoversHandler(w http.ResponseWriter, r *http.Request)
 }
 
 type InventoryHandler struct {
@@ -107,4 +109,31 @@ func (h InventoryHandler) HandleUpdateInventoryItem(w http.ResponseWriter, r *ht
 	}
 	slog.Info("inventory updated successfully", "inventoryID", item.IngredientID)
 	utils.ResponseInJSON(w, 200, item)
+}
+
+func (h InventoryHandler) HandleGetLeftoversHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Received request to get inventory leftovers")
+
+	sortBy := r.URL.Query().Get("sortBy")
+	pageStr := r.URL.Query().Get("page")
+	pageSizeStr := r.URL.Query().Get("pageSize")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize < 1 {
+		pageSize = 10
+	}
+
+	result, err := h.inventoryService.GetLeftovers(sortBy, page, pageSize)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("Successfully retrieved inventory leftovers")
+	utils.ResponseInJSON(w, 200, result)
 }

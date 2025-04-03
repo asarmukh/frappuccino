@@ -15,6 +15,7 @@ type InventoryServiceInterface interface {
 	GetInventoryByID(id int) (models.InventoryItem, error)
 	DeleteInventoryItemByID(id int) error
 	UpdateInventoryItem(inventoryItemID int, changedInventoryItem models.InventoryItem) (models.InventoryItem, error)
+	GetLeftovers(sortBy string, page, pageSize int) (map[string]interface{}, error)
 }
 
 type InventoryService struct {
@@ -68,4 +69,30 @@ func (h InventoryService) UpdateInventoryItem(inventoryItemID int, changedInvent
 	}
 
 	return h.repository.UpdateInventoryItem(inventoryItemID, changedInventoryItem)
+}
+
+func (h InventoryService) GetLeftovers(sortBy string, page, pageSize int) (map[string]interface{}, error) {
+	if page < 1 {
+		return nil, errors.New("page must be 1 or greater")
+	}
+	if pageSize < 1 {
+		return nil, errors.New("pageSize must be 1 or greater")
+	}
+
+	items, totalCount, err := h.repository.GetLeftovers(sortBy, page, pageSize)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPages := (totalCount + pageSize - 1) / pageSize
+	hasNextPage := page < totalPages
+
+	response := map[string]interface{}{
+		"currentPage": page,
+		"hasNextPage": hasNextPage,
+		"pageSize":    pageSize,
+		"totalPages":  totalPages,
+		"data":        items,
+	}
+	return response, nil
 }

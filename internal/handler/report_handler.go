@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type ReportHandlerInterface interface {
@@ -95,41 +94,27 @@ func (h ReportHandler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Search response sent successfully")
 }
 
-func (h ReportHandler) HandleGetOrderedItemsByPeriod(w http.ResponseWriter, r *http.Request) {
+func (h *ReportHandler) HandleGetOrderedItemsByPeriod(w http.ResponseWriter, r *http.Request) {
 	period := r.URL.Query().Get("period")
 	month := r.URL.Query().Get("month")
-	year := r.URL.Query().Get("year")
+	yearStr := r.URL.Query().Get("year")
 
-	if period == "" {
-		http.Error(w, "Period is required", http.StatusBadRequest)
-		return
-	}
-
-	if period == "day" {
-		if month == "" {
-			month = time.Now().Month().String()
-		}
-		if year == "" {
-			year = fmt.Sprintf("%d", time.Now().Year())
-		}
-	} else if period == "month" {
-		if year == "" {
-			year = fmt.Sprintf("%d", time.Now().Year())
+	var year int
+	var err error
+	if yearStr != "" {
+		year, err = strconv.Atoi(yearStr)
+		if err != nil {
+			http.Error(w, "неверный формат параметра year", http.StatusBadRequest)
+			return
 		}
 	}
 
-	orderedItems, err := h.reportService.GetOrderedItemsByPeriod(period, month, year)
+	responseData, err := h.reportService.GetOrderedItemsByPeriod(period, month, year)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to retrieve ordered items: %v", err), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	response := map[string]interface{}{
-		"period":       period,
-		"month":        month,
-		"year":         year,
-		"orderedItems": orderedItems,
-	}
-
-	utils.ResponseInJSON(w, http.StatusOK, response)
+	utils.ResponseInJSON(w, http.StatusOK, responseData)
+	slog.Info("Search response sent successfully")
 }

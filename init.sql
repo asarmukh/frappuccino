@@ -73,6 +73,22 @@ CREATE TABLE order_status_history (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE OR REPLACE FUNCTION log_order_status_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.status IS DISTINCT FROM NEW.status THEN
+        INSERT INTO order_status_history(order_id, status, created_at)
+        VALUES (NEW.id, NEW.status, NOW());
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER order_status_change_trigger
+AFTER UPDATE ON orders
+FOR EACH ROW
+EXECUTE FUNCTION log_order_status_change();
+
 CREATE TABLE menu_item_ingredients (
     menu_item_id INT NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,
     ingredient_id INT NOT NULL REFERENCES inventory(id) ON DELETE CASCADE,
@@ -89,6 +105,29 @@ CREATE TABLE inventory_transaction (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE OR REPLACE FUNCTION log_inventory_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.quantity IS DISTINCT FROM NEW.quantity THEN
+        INSERT INTO inventory_transaction(inventory_id, transaction_type, quantity, notes, created_at)
+        VALUES (NEW.id, 
+                CASE 
+                    WHEN NEW.quantity > OLD.quantity THEN 'restock'::transaction_type 
+                    ELSE 'use'::transaction_type 
+                END,
+                ABS(NEW.quantity - OLD.quantity),
+                'Auto update from inventory change',
+                NOW());
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER inventory_change_trigger
+AFTER UPDATE ON inventory
+FOR EACH ROW
+EXECUTE FUNCTION log_inventory_change();
+
 CREATE TABLE price_history (
     id SERIAL PRIMARY KEY,
     menu_item_id INT REFERENCES menu_items(id) ON DELETE CASCADE,
@@ -97,6 +136,28 @@ CREATE TABLE price_history (
     effective_to TIMESTAMPTZ,
     change_reason TEXT
 );
+
+CREATE OR REPLACE FUNCTION log_price_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.price IS DISTINCT FROM NEW.price THEN
+        -- Закрываем старую запись
+        UPDATE price_history
+        SET effective_to = NOW()
+        WHERE menu_item_id = NEW.id AND effective_to IS NULL;
+
+        -- Добавляем новую запись
+        INSERT INTO price_history(menu_item_id, price, effective_from, change_reason)
+        VALUES (NEW.id, NEW.price, NOW(), 'Auto update from menu_items');
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER price_change_trigger
+AFTER UPDATE OF price ON menu_items
+FOR EACH ROW
+EXECUTE FUNCTION log_price_change();
 
 -- Создание индексов
 -- Индекс для поиска по категориям меню

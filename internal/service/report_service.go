@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"frappuccino/internal/dal"
 	"frappuccino/models"
@@ -9,8 +10,8 @@ import (
 
 type ReportServiceInterface interface {
 	GetTotalSales() (float64, error)
-	GetOrderedItemsByPeriod(period, month, year string) (interface{}, error)
 	GetPopularItems() ([]models.MenuItem, error)
+	GetOrderedItemsByPeriod(period string, month string, year int) ([]models.OrderItemReport, error)
 	Search(q string, filters []string, minPrice int, maxPrice int) (models.SearchResult, error)
 }
 
@@ -37,23 +38,22 @@ func (s ReportService) GetPopularItems() ([]models.MenuItem, error) {
 	return s.reportRepo.GetPopularItems()
 }
 
-func (s ReportService) GetOrderedItemsByPeriod(period, month, year string) (interface{}, error) {
-	var orderedItems interface{}
-	var err error
-
+func (s *ReportService) GetOrderedItemsByPeriod(period string, month string, year int) ([]models.OrderItemReport, error) {
 	if period == "day" {
-		orderedItems, err = s.reportRepo.GetOrderedItemsByDay(month, year)
+		result, err := s.reportRepo.GetOrderedItemsByDay(month)
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
 	} else if period == "month" {
-		orderedItems, err = s.reportRepo.GetOrderedItemsByMonth(year)
-	} else {
-		return nil, fmt.Errorf("invalid period parameter")
+		result, err := s.reportRepo.GetOrderedItemsByMonth(year)
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
 	}
 
-	if err != nil {
-		return nil, fmt.Errorf("error getting ordered items by period: %w", err)
-	}
-
-	return orderedItems, nil
+	return nil, errors.New("неверное значение параметра period")
 }
 
 func (s ReportService) Search(q string, filters []string, minPrice int, maxPrice int) (models.SearchResult, error) {

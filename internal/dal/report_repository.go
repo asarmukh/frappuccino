@@ -13,8 +13,8 @@ import (
 type ReportRepositoryInterface interface {
 	TotalSales() (float64, error)
 	GetPopularItems() ([]models.MenuItem, error)
-	GetOrderedItemsByDay(month, year string) ([]map[string]int, error)
-	GetOrderedItemsByMonth(year string) ([]map[string]int, error)
+	GetOrderedItemsByDay(month string) ([]models.OrderItemReport, error)
+	GetOrderedItemsByMonth(year int) ([]models.OrderItemReport, error)
 	SearchMenu(q string, minPrice int, maxPrice int) (models.SearchResult, error)
 	SearchOrders(q string, minPrice int, maxPrice int) (models.SearchResult, error)
 }
@@ -116,86 +116,82 @@ func (r ReportRepository) GetPopularItems() ([]models.MenuItem, error) {
 	return popularItems, nil
 }
 
-func (r ReportRepository) GetOrderedItemsByDay(month, year string) ([]map[string]int, error) {
+func (r *ReportRepository) GetOrderedItemsByDay(month string) ([]models.OrderItemReport, error) {
 	if month == "" {
-		month = time.Now().Month().String() // Get the current month name
+		return nil, fmt.Errorf("month is required when period is 'day'")
 	}
 
-	if year == "" {
-		year = fmt.Sprintf("%d", time.Now().Year()) // Get the current year
+	monthInt, err := time.Parse("January", month)
+	if err != nil {
+		return nil, fmt.Errorf("invalid month name: %w", err)
 	}
-
-	// Convert month to title case to ensure it matches PostgreSQL's output format
-	month = strings.Title(month)
+	monthNumber := int(monthInt.Month())
 
 	query := `
-        SELECT EXTRACT(DAY FROM o.created_at) AS day, SUM(oi.quantity) AS quantity
-        FROM order_items oi
-        JOIN orders o ON oi.order_id = o.id
-        WHERE TO_CHAR(o.created_at, 'Month') = $1
-        AND EXTRACT(YEAR FROM o.created_at) = $2
-        GROUP BY EXTRACT(DAY FROM o.created_at)
+        SELECT EXTRACT(DAY FROM created_at) AS day, COUNT(*) 
+        FROM orders 
+        WHERE EXTRACT(MONTH FROM created_at) = $1        
+        GROUP BY day
         ORDER BY day;
     `
 
-	rows, err := r.db.Query(query, month, year)
+	rows, err := r.db.Query(query, monthNumber)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query ordered items by day: %w", err)
+		return nil, fmt.Errorf("ошибка выполнения запроса: %v", err)
 	}
 	defer rows.Close()
 
-	var orderedItems []map[string]int
+	var result []models.OrderItemReport
 	for rows.Next() {
-		var day int
-		var quantity int
-		if err := rows.Scan(&day, &quantity); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+		var day string
+		var count int
+		if err := rows.Scan(&day, &count); err != nil {
+			return nil, err
 		}
-		orderedItems = append(orderedItems, map[string]int{fmt.Sprintf("%d", day): quantity})
+
+		result = append(result, models.OrderItemReport{
+			Period: day,
+			Count:  count,
+		})
 	}
 
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating rows: %w", err)
-	}
-
-	return orderedItems, nil
+	return result, nil
 }
 
-func (r ReportRepository) GetOrderedItemsByMonth(year string) ([]map[string]int, error) {
-	if year == "" {
-		year = fmt.Sprintf("%d", time.Now().Year())
+func (r *ReportRepository) GetOrderedItemsByMonth(year int) ([]models.OrderItemReport, error) {
+	if year == 0 {
+		return nil, fmt.Errorf("year is required when period is 'month'")
 	}
 
 	query := `
-		SELECT TO_CHAR(o.created_at, 'Month') AS month, SUM(oi.quantity) AS quantity
-		FROM order_items oi
-		JOIN orders o ON oi.order_id = o.id
-		WHERE EXTRACT(YEAR FROM o.created_at) = $1
-		GROUP BY TO_CHAR(o.created_at, 'Month')
-		ORDER BY EXTRACT(MONTH FROM o.created_at);
-	`
+        SELECT TO_CHAR(created_at, 'Month') AS month, COUNT(*) 
+        FROM orders 
+        WHERE EXTRACT(YEAR FROM created_at) = $1
+        GROUP BY month
+        ORDER BY MIN(created_at);
+    `
 
 	rows, err := r.db.Query(query, year)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query ordered items by month: %w", err)
+		return nil, fmt.Errorf("ошибка выполнения запроса: %v", err)
 	}
 	defer rows.Close()
 
-	var orderedItems []map[string]int
+	var result []models.OrderItemReport
 	for rows.Next() {
 		var month string
-		var quantity int
-		if err := rows.Scan(&month, &quantity); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+		var count int
+		if err := rows.Scan(&month, &count); err != nil {
+			return nil, err
 		}
-		orderedItems = append(orderedItems, map[string]int{month: quantity})
+
+		result = append(result, models.OrderItemReport{
+			Period: strings.TrimSpace(month),
+			Count:  count,
+		})
 	}
 
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating rows: %w", err)
-	}
-
-	return orderedItems, nil
+	return result, nil
 }
 
 func (r ReportRepository) SearchMenu(q string, minPrice int, maxPrice int) (models.SearchResult, error) {
