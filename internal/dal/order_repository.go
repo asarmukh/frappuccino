@@ -9,6 +9,7 @@ import (
 	"frappuccino/models"
 	"frappuccino/utils"
 	"log"
+	"log/slog"
 	"time"
 )
 
@@ -410,10 +411,24 @@ func (r OrderRepository) CloseOrder(id int) (models.Order, []struct {
 		querySubsctruct := `UPDATE inventory SET quantity = quantity - $1 WHERE id = $2 RETURNING quantity`
 		for ingredientID, requiredQuantity := range ingredientQuantities {
 			// Используем QueryRow вместо Exec, чтобы получить оставшееся количество
+			var reorderThreshold float64
 			var remaining float64
 			err := tx.QueryRow(querySubsctruct, requiredQuantity, ingredientID).Scan(&remaining)
 			if err != nil {
 				return fmt.Errorf("failed to update inventory: %v", err)
+			}
+
+			// порог перезаказа:
+			reorderThresholdQuery := `SELECT quantity, reorder_threshold FROM inventory WHERE id = $1`
+			err = tx.QueryRow(reorderThresholdQuery, ingredientID).Scan(&remaining, &reorderThreshold)
+			if err != nil {
+				return fmt.Errorf("failed to check inventory: %v", err)
+			}
+
+			if remaining <= reorderThreshold {
+				slog.Warn("⚠️ Warning!")
+				slog.Warn("⚠️ Ingredient %d is below reorder threshold (%f left)\n", ingredientID, remaining)
+				// Тут можно добавить логику создания заказа поставщику
 			}
 
 			// Добавляем информацию об обновлении в слайс

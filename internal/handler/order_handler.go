@@ -121,7 +121,8 @@ func (h OrderHandler) HandleCloseOrder(w http.ResponseWriter, r *http.Request, o
 	slog.Info("Received request to close order", "orderID", orderID)
 
 	order, inventoryUpdates, err := h.orderService.CloseOrder(orderID)
-	fmt.Println(inventoryUpdates)
+	if inventoryUpdates == nil {
+	}
 	if err != nil {
 		slog.Warn("Failed to close order", "orderID", orderID, "error", err)
 		utils.ErrorInJSON(w, http.StatusNotFound, err)
