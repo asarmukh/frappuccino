@@ -1,11 +1,39 @@
-package routes
+package config
 
 import (
 	"frappuccino/internal/handler"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 )
+
+func SetupRoutes(mux *http.ServeMux, orderHandler handler.OrderHandler, menuHandler handler.MenuHandler, inventoryHandler handler.InventoryHandler, reportHandler handler.ReportHandler) {
+	// Вспомогательная функция для логирования и обработки маршрутов
+	handleWithLog := func(path string, handlerFunc http.HandlerFunc) {
+		mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+			log.Printf("🔥 Request processed in %s\n", path)
+			handlerFunc(w, r)
+		})
+	}
+
+	handleWithLog("/orders", HandleRequestsOrders(orderHandler))
+	handleWithLog("/orders/", HandleRequestsOrders(orderHandler))
+
+	handleWithLog("/menu", HandleMenu(menuHandler))
+	handleWithLog("/menu/", HandleMenu(menuHandler))
+
+	handleWithLog("/inventory", HandleRequestsInventory(inventoryHandler))
+	handleWithLog("/inventory/", HandleRequestsInventory(inventoryHandler))
+
+	handleWithLog("/reports", HandleRequestsReports(reportHandler))
+	handleWithLog("/reports/", HandleRequestsReports(reportHandler))
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("🔥 Request for an unknown route:", r.URL.Path)
+		http.Error(w, "Page not found", http.StatusNotFound)
+	})
+}
 
 func HandleRequestsReports(reportHandler handler.ReportHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

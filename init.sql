@@ -54,7 +54,7 @@ CREATE TABLE inventory (
     quantity DECIMAL NOT NULL CHECK (quantity >= 0),
     unit VARCHAR(50) NOT NULL,
     reorder_threshold DECIMAL CHECK (reorder_threshold >= 0),
-    updated_at TIMESTAMPTZ
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE order_items (

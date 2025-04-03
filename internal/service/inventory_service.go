@@ -63,5 +63,9 @@ func (h InventoryService) DeleteInventoryItemByID(id int) error {
 }
 
 func (h InventoryService) UpdateInventoryItem(inventoryItemID int, changedInventoryItem models.InventoryItem) (models.InventoryItem, error) {
+	if changedInventoryItem.Quantity < 0 {
+		return models.InventoryItem{}, errors.New("you can't pass a negative amount")
+	}
+
 	return h.repository.UpdateInventoryItem(inventoryItemID, changedInventoryItem)
 }
