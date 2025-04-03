@@ -2,13 +2,12 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"flag"
 	"fmt"
 	"frappuccino/helper"
+	"frappuccino/internal/config"
 	"frappuccino/internal/dal"
 	"frappuccino/internal/handler"
-	"frappuccino/internal/routes"
 	"frappuccino/internal/service"
 	"log"
 	"net/http"
@@ -29,7 +28,7 @@ func main() {
 		return
 	}
 
-	db := connectDB()
+	db := config.ConnectDB()
 	defer db.Close()
 
 	inventoryRepo := dal.NewInventoryRepository(db)
@@ -49,7 +48,7 @@ func main() {
 	reportHandler := handler.NewReportHandler(reportService)
 
 	mux := http.NewServeMux()
-	setupRoutes(mux, orderHandler, menuHandler, inventoryHandler, reportHandler)
+	config.SetupRoutes(mux, orderHandler, menuHandler, inventoryHandler, reportHandler)
 
 	if *port < 1 || *port > 65535 {
 		log.Fatal("Error port")
@@ -88,79 +87,4 @@ func main() {
 	}
 
 	log.Println("Сервер успешно завершил работу")
-}
-
-// Подключение к базе данных с тайм-аутом
-func connectDB() *sql.DB {
-	connStr := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-		getEnv("DB_HOST", "localhost"),
-		getEnv("DB_USER", "latte"),
-		getEnv("DB_PASSWORD", "latte"),
-		getEnv("DB_NAME", "frappuccino"),
-		getEnv("DB_PORT", "5432"),
-	)
-
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		log.Fatal("❌ Database connection error:", err)
-	}
-
-	// Ожидание доступности базы данных с тайм-аутом
-	waitForDB(db)
-	fmt.Println("✅ Connected to PostgreSQL")
-	return db
-}
-
-// Ожидание доступности базы данных
-func waitForDB(db *sql.DB) {
-	timeout := time.After(30 * time.Second) // Тайм-аут через 30 секунд
-	tick := time.Tick(2 * time.Second)
-
-	for {
-		select {
-		case <-timeout:
-			log.Fatal("❌ Тайм-аут подключения к БД")
-		case <-tick:
-			if err := db.Ping(); err == nil {
-				return
-			}
-			fmt.Println("⏳ Ожидание подключения к БД...")
-		}
-	}
-}
-
-func setupRoutes(mux *http.ServeMux, orderHandler handler.OrderHandler, menuHandler handler.MenuHandler, inventoryHandler handler.InventoryHandler, reportHandler handler.ReportHandler) {
-	// Вспомогательная функция для логирования и обработки маршрутов
-	handleWithLog := func(path string, handlerFunc http.HandlerFunc) {
-		mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-			log.Printf("🔥 Request processed in %s\n", path)
-			handlerFunc(w, r)
-		})
-	}
-
-	handleWithLog("/orders", routes.HandleRequestsOrders(orderHandler))
-	handleWithLog("/orders/", routes.HandleRequestsOrders(orderHandler))
-
-	handleWithLog("/menu", routes.HandleMenu(menuHandler))
-	handleWithLog("/menu/", routes.HandleMenu(menuHandler))
-
-	handleWithLog("/inventory", routes.HandleRequestsInventory(inventoryHandler))
-	handleWithLog("/inventory/", routes.HandleRequestsInventory(inventoryHandler))
-
-	handleWithLog("/reports", routes.HandleRequestsReports(reportHandler))
-	handleWithLog("/reports/", routes.HandleRequestsReports(reportHandler))
-
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("🔥 Request for an unknown route:", r.URL.Path)
-		http.Error(w, "Page not found", http.StatusNotFound)
-	})
-}
-
-// Функция для получения переменных окружения с дефолтным значением
-func getEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return defaultValue
 }

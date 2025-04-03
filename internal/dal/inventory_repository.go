@@ -144,7 +144,7 @@ func (r InventoryRepositoryPostgres) UpdateInventoryItem(inventoryItemID int, ch
 	}
 
 	errTransact := database.WithTransaction(r.db, func(tx *sql.Tx) error {
-		updateQuery := `UPDATE inventory SET ingredient_name = $1, quantity = $2, unit = $3, reorder_threshold = $4, updated_at = NOW() WHERE id = $5 RETURNING id, ingredient_name, quantity, unit, reorder_threshold, updated_at`
+		updateQuery := `UPDATE inventory SET ingredient_name = $1, quantity = quantity + $2, unit = $3, reorder_threshold = $4, updated_at = NOW() WHERE id = $5 RETURNING id, ingredient_name, quantity, unit, reorder_threshold, updated_at`
 		err = tx.QueryRow(
 			updateQuery,
 			changedInventoryItem.Name,
