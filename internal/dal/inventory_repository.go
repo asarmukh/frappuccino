@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
 	"frappuccino/internal/database"
 	"frappuccino/models"
 )
@@ -161,7 +162,6 @@ func (r InventoryRepositoryPostgres) UpdateInventoryItem(inventoryItemID int, ch
 			&existingItem.ReorderThreshold,
 			&existingItem.UpdatedAt,
 		)
-
 		if err != nil {
 			return fmt.Errorf("ошибка при обновлении элемента: %v", err)
 		}

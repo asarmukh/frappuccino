@@ -4,16 +4,17 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"frappuccino/helper"
-	"frappuccino/internal/config"
-	"frappuccino/internal/dal"
-	"frappuccino/internal/handler"
-	"frappuccino/internal/service"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
+
+	"frappuccino/helper"
+	"frappuccino/internal/config"
+	"frappuccino/internal/dal"
+	"frappuccino/internal/handler"
+	"frappuccino/internal/service"
 
 	_ "github.com/lib/pq"
 )

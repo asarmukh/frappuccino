@@ -3,9 +3,10 @@ package service
 import (
 	"errors"
 	"fmt"
+	"log/slog"
+
 	"frappuccino/internal/dal"
 	"frappuccino/models"
-	"log/slog"
 )
 
 type ReportServiceInterface interface {

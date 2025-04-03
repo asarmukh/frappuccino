@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"frappuccino/internal/database"
-	"frappuccino/models"
-	"frappuccino/utils"
 	"log"
 	"log/slog"
 	"time"
+
+	"frappuccino/internal/database"
+	"frappuccino/models"
+	"frappuccino/utils"
 )
 
 type OrderRepositoryInterface interface {
@@ -315,7 +316,8 @@ func (r OrderRepository) CloseOrder(id int) (models.Order, []struct {
 	Name         string  `json:"name"`
 	QuantityUsed float64 `json:"quantity_used"`
 	Remaining    float64 `json:"remaining"`
-}, error) {
+}, error,
+) {
 	order, errLoad := r.LoadOrder(id)
 	if errLoad != nil {
 		return order, nil, errLoad

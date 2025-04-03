@@ -2,11 +2,12 @@ package service
 
 import (
 	"errors"
+	"log"
+	"strings"
+
 	"frappuccino/internal/dal"
 	"frappuccino/models"
 	"frappuccino/utils"
-	"log"
-	"strings"
 )
 
 type InventoryServiceInterface interface {

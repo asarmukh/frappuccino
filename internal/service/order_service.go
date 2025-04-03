@@ -2,13 +2,14 @@ package service
 
 import (
 	"fmt"
-	"frappuccino/internal/dal"
-	"frappuccino/models"
-	"frappuccino/utils"
 	"log"
 	"log/slog"
 	"strings"
 	"time"
+
+	"frappuccino/internal/dal"
+	"frappuccino/models"
+	"frappuccino/utils"
 )
 
 type OrderServiceInterface interface {
@@ -142,7 +143,8 @@ func (s OrderService) CloseOrder(id int) (models.Order, []struct {
 	Name         string  `json:"name"`
 	QuantityUsed float64 `json:"quantity_used"`
 	Remaining    float64 `json:"remaining"`
-}, error) {
+}, error,
+) {
 	order, inventoryUpdates, err := s.orderRepo.CloseOrder(id)
 	if err != nil {
 		return models.Order{}, nil, err

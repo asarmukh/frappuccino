@@ -2,12 +2,13 @@ package handler
 
 import (
 	"fmt"
-	"frappuccino/internal/service"
-	"frappuccino/utils"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"frappuccino/internal/service"
+	"frappuccino/utils"
 )
 
 type ReportHandlerInterface interface {

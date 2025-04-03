@@ -4,9 +4,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
+
 	"frappuccino/internal/database"
 	"frappuccino/models"
-	"strings"
 
 	"github.com/lib/pq"
 )
@@ -265,7 +266,6 @@ func (r MenuRepository) UpdateMenu(id int, changeMenu models.MenuItem) (models.M
 		RETURNING ingredient_id, quantity`
 
 			err = tx.QueryRow(queryUpdateIngredients, id, ingredient.IngredientID, ingredient.Quantity).Scan(&ingredient.IngredientID, &ingredient.Quantity)
-
 			if err != nil {
 				return fmt.Errorf("ошибка при обновлении ингредиента: %v", err)
 			}

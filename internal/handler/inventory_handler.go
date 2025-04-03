@@ -3,12 +3,13 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"frappuccino/internal/service"
-	"frappuccino/models"
-	"frappuccino/utils"
 	"log/slog"
 	"net/http"
 	"strconv"
+
+	"frappuccino/internal/service"
+	"frappuccino/models"
+	"frappuccino/utils"
 )
 
 type InventoryHandlerInterface interface {

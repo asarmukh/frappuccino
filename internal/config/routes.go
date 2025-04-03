@@ -1,11 +1,12 @@
 package config
 
 import (
-	"frappuccino/internal/handler"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"frappuccino/internal/handler"
 )
 
 func SetupRoutes(mux *http.ServeMux, orderHandler handler.OrderHandler, menuHandler handler.MenuHandler, inventoryHandler handler.InventoryHandler, reportHandler handler.ReportHandler) {

@@ -3,9 +3,10 @@ package dal
 import (
 	"database/sql"
 	"fmt"
-	"frappuccino/models"
 	"strings"
 	"time"
+
+	"frappuccino/models"
 
 	"github.com/lib/pq"
 )
