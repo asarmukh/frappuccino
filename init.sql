@@ -112,8 +112,8 @@ BEGIN
         INSERT INTO inventory_transaction(inventory_id, transaction_type, quantity, notes, created_at)
         VALUES (NEW.id, 
                 CASE 
-                    WHEN NEW.quantity > OLD.quantity THEN 'restock' 
-                    ELSE 'use' 
+                    WHEN NEW.quantity > OLD.quantity THEN 'restock'::transaction_type 
+                    ELSE 'use'::transaction_type 
                 END,
                 ABS(NEW.quantity - OLD.quantity),
                 'Auto update from inventory change',

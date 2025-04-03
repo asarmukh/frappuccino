@@ -37,11 +37,12 @@ func HandleRequestsInventory(inventoryHandler handler.InventoryHandler) http.Han
 		parts := strings.SplitN(path, "/", 3)
 
 		var id int
-		if len(parts) > 1 {
-			var err error
+		var err error
+
+		if len(parts) > 1 && parts[0] == "inventory" && parts[1] != "getLeftOvers" {
 			id, err = strconv.Atoi(parts[1])
 			if err != nil {
-				http.Error(w, "Invalid order ID", http.StatusBadRequest)
+				http.Error(w, "Invalid inventory ID", http.StatusBadRequest)
 				return
 			}
 		}
@@ -52,6 +53,8 @@ func HandleRequestsInventory(inventoryHandler handler.InventoryHandler) http.Han
 		case http.MethodGet:
 			if len(parts) == 1 {
 				inventoryHandler.HandleGetAllInventory(w, r)
+			} else if len(parts) == 2 && parts[0] == "inventory" && parts[1] == "getLeftOvers" {
+				inventoryHandler.HandleGetLeftoversHandler(w, r)
 			} else if len(parts) == 2 {
 				inventoryHandler.HandleGetInventoryById(w, r, id)
 			} else {

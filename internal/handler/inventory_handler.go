@@ -17,6 +17,7 @@ type InventoryHandlerInterface interface {
 	HandleGetInventoryById(w http.ResponseWriter, r *http.Request, id string)
 	HandleDeleteInventoryItem(w http.ResponseWriter, r *http.Request, inventoryItemID string)
 	HandleUpdateInventoryItem(w http.ResponseWriter, r *http.Request, inventoryItemID string)
+	HandleGetLeftoversHandler(w http.ResponseWriter, r *http.Request)
 }
 
 type InventoryHandler struct {
@@ -110,7 +111,7 @@ func (h InventoryHandler) HandleUpdateInventoryItem(w http.ResponseWriter, r *ht
 	utils.ResponseInJSON(w, 200, item)
 }
 
-func (h InventoryHandler) GetLeftoversHandler(w http.ResponseWriter, r *http.Request) {
+func (h InventoryHandler) HandleGetLeftoversHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Received request to get inventory leftovers")
 
 	sortBy := r.URL.Query().Get("sortBy")

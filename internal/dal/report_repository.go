@@ -14,7 +14,7 @@ type ReportRepositoryInterface interface {
 	TotalSales() (float64, error)
 	GetPopularItems() ([]models.MenuItem, error)
 	GetOrderedItemsByDay(month string) ([]models.OrderItemReport, error)
-	GetOrderedItemsByMonth(year string) ([]map[string]int, error)
+	GetOrderedItemsByMonth(year int) ([]models.OrderItemReport, error)
 	SearchMenu(q string, minPrice int, maxPrice int) (models.SearchResult, error)
 	SearchOrders(q string, minPrice int, maxPrice int) (models.SearchResult, error)
 }
@@ -186,7 +186,7 @@ func (r *ReportRepository) GetOrderedItemsByMonth(year int) ([]models.OrderItemR
 		}
 
 		result = append(result, models.OrderItemReport{
-			Period: month,
+			Period: strings.TrimSpace(month),
 			Count:  count,
 		})
 	}
