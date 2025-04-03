@@ -19,8 +19,7 @@ type MenuServiceInterface interface {
 }
 
 type MenuService struct {
-	repository       dal.MenuRepositoryInterface
-	inventoryService InventoryService
+	repository dal.MenuRepositoryInterface
 }
 
 func NewMenuService(_repository dal.MenuRepositoryInterface) MenuService {

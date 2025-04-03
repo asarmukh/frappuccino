@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
-
-	// "frappuccino/internal/db"
+	"frappuccino/internal/database"
 	"frappuccino/models"
 	"frappuccino/utils"
 	"log"
+	"log/slog"
+	"time"
 )
 
 type OrderRepositoryInterface interface {
@@ -19,7 +19,12 @@ type OrderRepositoryInterface interface {
 	LoadOrder(id int) (models.Order, error)
 	DeleteOrderByID(id int) error
 	UpdateOrder(id int) (models.Order, error)
-	CloseOrder(id int) (models.Order, error)
+	CloseOrder(id int) (models.Order, []struct {
+		IngredientID int     `json:"ingredient_id"`
+		Name         string  `json:"name"`
+		QuantityUsed float64 `json:"quantity_used"`
+		Remaining    float64 `json:"remaining"`
+	}, error)
 	GetOrderedItemsCount(start, end time.Time) (map[string]int, error)
 }
 
@@ -33,65 +38,55 @@ func NewOrderRepository(db *sql.DB) OrderRepository {
 
 // Method for adding a new order to the database
 func (r OrderRepository) AddOrder(order models.Order) (models.Order, error) {
-	tx, err := r.db.Begin()
-	if err != nil {
-		return models.Order{}, err
-	}
-
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-			log.Println("Transaction rolled back:", err)
-		} else {
-			err = tx.Commit()
-			if err != nil {
-				log.Println("Commit error:", err)
-			}
-		}
-	}()
-
 	query := `INSERT INTO orders (name, total_amount, special_instructions)
 			VALUES ($1, $2, $3)
 			RETURNING id, name, status, total_amount, special_instructions, created_at, updated_at`
 
-	specialInstructionsByte, err := json.Marshal(order.SpecialInstructions)
-	if err != nil {
-		return models.Order{}, err
-	}
-	var specialInstructionsData []byte
-	if err := r.db.QueryRow(
-		query,
-		order.CustomerName,
-		order.TotalAmount,
-		specialInstructionsByte,
-	).Scan(&order.ID, &order.CustomerName, &order.Status, &order.TotalAmount, &specialInstructionsData, &order.CreatedAt, &order.UpdatedAt); err != nil {
-		log.Printf("Error inserting order: %v", err)
-		return models.Order{}, err
-	}
-	// Декодируем JSONB в map[string]string
-	if err := json.Unmarshal(specialInstructionsData, &order.SpecialInstructions); err != nil {
-		return models.Order{}, err
-	}
-
-	queryPrice := `SELECT price FROM menu_items WHERE id = $1`
-	for i := range order.Items {
-		err := r.db.QueryRow(queryPrice, order.Items[i].ProductID).Scan(&order.Items[i].Price)
+	errTransact := database.WithTransaction(r.db, func(tx *sql.Tx) error {
+		specialInstructionsByte, err := json.Marshal(order.SpecialInstructions)
 		if err != nil {
-			return models.Order{}, err
+			return err
+		}
+		var specialInstructionsData []byte
+		if err := tx.QueryRow(
+			query,
+			order.CustomerName,
+			order.TotalAmount,
+			specialInstructionsByte,
+		).Scan(&order.ID, &order.CustomerName, &order.Status, &order.TotalAmount, &specialInstructionsData, &order.CreatedAt, &order.UpdatedAt); err != nil {
+			log.Printf("Error inserting order: %v", err)
+			return err
+		}
+		// Декодируем JSONB в map[string]string
+		if err := json.Unmarshal(specialInstructionsData, &order.SpecialInstructions); err != nil {
+			return err
 		}
 
-		query := `INSERT INTO order_items (order_id, menu_item_id, quantity, price)
-				  VALUES ($1, $2, $3, $4)`
-		_, err = tx.Exec(query, order.ID, order.Items[i].ProductID, order.Items[i].Quantity, order.Items[i].Price)
-		if err != nil {
-			return models.Order{}, err
+		queryPrice := `SELECT price FROM menu_items WHERE id = $1`
+		for i := range order.Items {
+			err := tx.QueryRow(queryPrice, order.Items[i].ProductID).Scan(&order.Items[i].Price)
+			if err != nil {
+				return err
+			}
+
+			query := `INSERT INTO order_items (order_id, menu_item_id, quantity, price)
+				  VALUES ($1, $2, $3, $4)
+				  ON CONFLICT (order_id, menu_item_id) DO NOTHING`
+			_, err = tx.Exec(query, order.ID, order.Items[i].ProductID, order.Items[i].Quantity, order.Items[i].Price)
+			if err != nil {
+				return err
+			}
 		}
+		return nil
+	})
+	if errTransact != nil {
+		return models.Order{}, errTransact
 	}
+
 	queryItems := `SELECT menu_item_id, quantity, price FROM order_items WHERE order_id = $1`
-	rows, err := tx.Query(queryItems, order.ID)
+	rows, err := r.db.Query(queryItems, order.ID)
 	if err != nil {
-		tx.Rollback()
-		return models.Order{}, fmt.Errorf("ошибка получения списка товаров заказа: %w", err)
+		return models.Order{}, fmt.Errorf("error getting list of order items: %w", err)
 	}
 	defer rows.Close()
 
@@ -99,8 +94,7 @@ func (r OrderRepository) AddOrder(order models.Order) (models.Order, error) {
 	for rows.Next() {
 		var item models.OrderItem
 		if err := rows.Scan(&item.ProductID, &item.Quantity, &item.Price); err != nil {
-			tx.Rollback()
-			return models.Order{}, fmt.Errorf("ошибка при сканировании товаров: %w", err)
+			return models.Order{}, fmt.Errorf("error scanning items: %w", err)
 		}
 		items = append(items, item)
 	}
@@ -116,7 +110,7 @@ func (r OrderRepository) LoadOrders() ([]models.Order, error) {
 	query := `SELECT id, name, status, total_amount, special_instructions, created_at, updated_at FROM orders`
 	rows, err := r.db.Query(query)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка выполнения запроса: %v", err)
+		return nil, fmt.Errorf("Query execution error: %v", err)
 	}
 	defer rows.Close() // Закрываем `rows` только ОДИН раз
 
@@ -126,19 +120,19 @@ func (r OrderRepository) LoadOrders() ([]models.Order, error) {
 
 		// Сканируем данные заказа
 		if err := rows.Scan(&order.ID, &order.CustomerName, &order.Status, &order.TotalAmount, &specialInstructionsStr, &order.CreatedAt, &order.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("ошибка сканирования строки: %v", err)
+			return nil, fmt.Errorf("line scan error: %v", err)
 		}
 
 		// Декодируем JSON
 		if err := json.Unmarshal([]byte(specialInstructionsStr), &order.SpecialInstructions); err != nil {
-			return nil, fmt.Errorf("ошибка декодирования JSON: %v", err)
+			return nil, fmt.Errorf("decoding error JSON: %v", err)
 		}
 
 		// Загружаем товары для этого заказа
 		queryItems := `SELECT menu_item_id, quantity, price FROM order_items WHERE order_id = $1`
 		itemRows, err := r.db.Query(queryItems, order.ID)
 		if err != nil {
-			return nil, fmt.Errorf("ошибка получения списка товаров заказа: %w", err)
+			return nil, fmt.Errorf("error getting list of order items: %w", err)
 		}
 		defer itemRows.Close() // Отдельный `defer` для товаров
 
@@ -146,7 +140,7 @@ func (r OrderRepository) LoadOrders() ([]models.Order, error) {
 		for itemRows.Next() {
 			var item models.OrderItem
 			if err := itemRows.Scan(&item.ProductID, &item.Quantity, &item.Price); err != nil {
-				return nil, fmt.Errorf("ошибка при сканировании товаров: %w", err)
+				return nil, fmt.Errorf("error scanning items: %w", err)
 			}
 			items = append(items, item)
 		}
@@ -157,7 +151,7 @@ func (r OrderRepository) LoadOrders() ([]models.Order, error) {
 
 	// Проверяем ошибки во внешнем rows
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("ошибка итерации строк: %v", err)
+		return nil, fmt.Errorf("row iteration error: %v", err)
 	}
 
 	return orders, nil
@@ -193,7 +187,7 @@ func (r OrderRepository) LoadOrder(id int) (models.Order, error) {
 	queryItems := `SELECT menu_item_id, quantity, price FROM order_items WHERE order_id = $1`
 	itemRows, err := r.db.Query(queryItems, order.ID)
 	if err != nil {
-		return models.Order{}, fmt.Errorf("ошибка получения списка товаров заказа: %w", err)
+		return models.Order{}, fmt.Errorf("error getting list of order items: %w", err)
 	}
 	defer itemRows.Close() // Отдельный `defer` для товаров
 
@@ -211,29 +205,29 @@ func (r OrderRepository) LoadOrder(id int) (models.Order, error) {
 }
 
 func (r OrderRepository) DeleteOrderByID(id int) error {
-	tx, err := r.db.Begin()
-	if err != nil {
-		return fmt.Errorf("failed to start transactioOrderRepositoryn: %v", err)
-	}
-	defer tx.Rollback()
+	errTransact := database.WithTransaction(r.db, func(tx *sql.Tx) error {
+		queryDelete := `DELETE FROM orders WHERE id = $1`
+		result, err := tx.Exec(queryDelete, id)
+		if err != nil {
+			return fmt.Errorf("error while deleting element: %v", err)
+		}
 
-	queryDelete := `DELETE FROM orders WHERE id = $1`
-	result, err := tx.Exec(queryDelete, id)
-	if err != nil {
-		return fmt.Errorf("error while deleting element: %v", err)
-	}
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("не удалось получить количество затронутых строк: %v", err)
+		}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("не удалось получить количество затронутых строк: %v", err)
-	}
+		if rowsAffected == 0 {
+			return fmt.Errorf("order with ID %d not found", id)
+		}
 
-	if rowsAffected == 0 {
-		return fmt.Errorf("order with ID %d not found", id)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("error committing transaction: %v", err)
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("error committing transaction: %v", err)
+		}
+		return nil
+	})
+	if errTransact != nil {
+		return errTransact
 	}
 
 	return nil
@@ -241,6 +235,14 @@ func (r OrderRepository) DeleteOrderByID(id int) error {
 
 // Обновление заказа
 func (r OrderRepository) UpdateOrder(id int, changeOrder models.Order) (models.Order, error) {
+	order, errLoad := r.LoadOrder(id)
+	if errLoad != nil {
+		return order, errLoad
+	}
+	if order.Status == "closed" {
+		return models.Order{}, fmt.Errorf("this order with %d is closed", id)
+	}
+
 	var orderUpdated models.Order
 	var specialInstructionsJSON []byte
 
@@ -249,50 +251,47 @@ func (r OrderRepository) UpdateOrder(id int, changeOrder models.Order) (models.O
 		return models.Order{}, fmt.Errorf("JSON marshaling error: %w", err)
 	}
 
-	tx, err := r.db.Begin()
-	if err != nil {
-		return models.Order{}, fmt.Errorf("transaction start error: %w", err)
-	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
-
 	queryUpdate := `
         UPDATE orders 
         SET name = $2, status = $3, total_amount = $4, special_instructions = $5::jsonb, updated_at = NOW() 
         WHERE id = $1 
         RETURNING *`
-	err = tx.QueryRow(queryUpdate, id, changeOrder.CustomerName, "updated", changeOrder.TotalAmount, specialInstructionsBytes).
-		Scan(&orderUpdated.ID, &orderUpdated.CustomerName, &orderUpdated.Status, &orderUpdated.TotalAmount, &specialInstructionsJSON, &orderUpdated.CreatedAt, &orderUpdated.UpdatedAt)
-	if err != nil {
-		return models.Order{}, fmt.Errorf("request execution error: %w", err)
-	}
-	// Декодирование JSON обратно в карту
-	err = json.Unmarshal(specialInstructionsJSON, &orderUpdated.SpecialInstructions)
-	if err != nil {
-		return models.Order{}, fmt.Errorf("JSON unmarshaling error: %w", err)
-	}
 
-	// Обновление позиций заказа
-	queryPrice := `SELECT price FROM menu_items WHERE id = $1`
-	queryUpdateItems := `UPDATE order_items SET quantity = $3, price = $4 WHERE order_id = $1 AND menu_item_id = $2`
-	for _, item := range changeOrder.Items {
-		err := tx.QueryRow(queryPrice, item.ProductID).Scan(&item.Price)
+	errTransact := database.WithTransaction(r.db, func(tx *sql.Tx) error {
+		err = tx.QueryRow(queryUpdate, id, changeOrder.CustomerName, "updated", changeOrder.TotalAmount, specialInstructionsBytes).
+			Scan(&orderUpdated.ID, &orderUpdated.CustomerName, &orderUpdated.Status, &orderUpdated.TotalAmount, &specialInstructionsJSON, &orderUpdated.CreatedAt, &orderUpdated.UpdatedAt)
 		if err != nil {
-			return models.Order{}, fmt.Errorf("error getting a price: %w", err)
+			return fmt.Errorf("request execution error: %w", err)
+		}
+		// Декодирование JSON обратно в карту
+		err = json.Unmarshal(specialInstructionsJSON, &orderUpdated.SpecialInstructions)
+		if err != nil {
+			return fmt.Errorf("JSON unmarshaling error: %w", err)
 		}
 
-		_, err = tx.Exec(queryUpdateItems, orderUpdated.ID, item.ProductID, item.Quantity, item.Price)
-		if err != nil {
-			return models.Order{}, fmt.Errorf("order Item Update Error: %w", err)
+		// Обновление позиций заказа
+		queryPrice := `SELECT price FROM menu_items WHERE id = $1`
+		queryUpdateItems := `UPDATE order_items SET quantity = $3, price = $4 WHERE order_id = $1 AND menu_item_id = $2`
+		for _, item := range changeOrder.Items {
+			err := tx.QueryRow(queryPrice, item.ProductID).Scan(&item.Price)
+			if err != nil {
+				return fmt.Errorf("error getting a price: %w", err)
+			}
+
+			_, err = tx.Exec(queryUpdateItems, orderUpdated.ID, item.ProductID, item.Quantity, item.Price)
+			if err != nil {
+				return fmt.Errorf("order Item Update Error: %w", err)
+			}
 		}
+		return nil
+	})
+	if errTransact != nil {
+		return models.Order{}, errTransact
 	}
 
 	// Получение актуальных позиций заказа
 	queryItems := `SELECT menu_item_id, quantity, price FROM order_items WHERE order_id = $1`
-	rows, err := tx.Query(queryItems, orderUpdated.ID)
+	rows, err := r.db.Query(queryItems, orderUpdated.ID)
 	if err != nil {
 		return models.Order{}, fmt.Errorf("error receiving the list of items of the order: %w", err)
 	}
@@ -308,21 +307,21 @@ func (r OrderRepository) UpdateOrder(id int, changeOrder models.Order) (models.O
 	}
 	orderUpdated.Items = items
 
-	// Фиксация транзакции
-	if err := tx.Commit(); err != nil {
-		return models.Order{}, fmt.Errorf("transaction commit error: %w", err)
-	}
-
 	return orderUpdated, nil
 }
 
-func (r OrderRepository) CloseOrder(id int) (models.Order, error) {
+func (r OrderRepository) CloseOrder(id int) (models.Order, []struct {
+	IngredientID int     `json:"ingredient_id"`
+	Name         string  `json:"name"`
+	QuantityUsed float64 `json:"quantity_used"`
+	Remaining    float64 `json:"remaining"`
+}, error) {
 	order, errLoad := r.LoadOrder(id)
 	if errLoad != nil {
-		return order, errLoad
+		return order, nil, errLoad
 	}
 	if order.Status == "closed" {
-		return models.Order{}, fmt.Errorf("this order with %d is already closed", id)
+		return models.Order{}, nil, fmt.Errorf("this order with %d is already closed", id)
 	}
 
 	// Шаг 1: Загружаем все позиции заказа
@@ -330,81 +329,150 @@ func (r OrderRepository) CloseOrder(id int) (models.Order, error) {
 	queryItems := `SELECT menu_item_id, quantity, price FROM order_items WHERE order_id = $1`
 	rows, errItem := r.db.Query(queryItems, id)
 	if errItem != nil {
-		return models.Order{}, errItem
+		return models.Order{}, nil, errItem
 	}
 	defer rows.Close()
 	var item models.OrderItem
 	for rows.Next() {
 		if err := rows.Scan(&item.ProductID, &item.Quantity, &item.Price); err != nil {
-			return models.Order{}, err
+			return models.Order{}, nil, err
 		}
 		orderItems = append(orderItems, item)
 	}
 
 	if err := rows.Err(); err != nil {
-		return models.Order{}, err
+		return models.Order{}, nil, err
 	}
+
 	// Загружаем все ингридиенты которые есть в позициях заказа
 	var ingredients []models.MenuItemIngredient
 	for _, item := range orderItems {
-		queryIngredients := `SELECT ingredient_id, quantity  FROM menu_item_ingredients WHERE menu_item_id = $1`
+		queryIngredients := `SELECT ingredient_id, quantity FROM menu_item_ingredients WHERE menu_item_id = $1`
 		rows2, errIngredient := r.db.Query(queryIngredients, item.ProductID)
 		if errIngredient != nil {
-			return models.Order{}, errIngredient
+			return models.Order{}, nil, errIngredient
 		}
 		defer rows2.Close()
 		var ingredient models.MenuItemIngredient
 		for rows2.Next() {
 			if err := rows2.Scan(&ingredient.IngredientID, &ingredient.Quantity); err != nil {
-				return models.Order{}, err
+				return models.Order{}, nil, err
 			}
+			ingredient.Quantity *= item.Quantity // Умножаем на количество предметов в заказе
 			ingredients = append(ingredients, ingredient)
 		}
 
 		if err := rows2.Err(); err != nil {
-			return models.Order{}, err
+			return models.Order{}, nil, err
 		}
 	}
 
-	// tm := db.NewTransactionManager(r.db)
+	// Суммируем количество каждого ингредиента по ID
+	ingredientQuantities := make(map[int]float64)
+	for _, ing := range ingredients {
+		ingredientQuantities[ing.IngredientID] += ing.Quantity
+	}
 
-	// errTransact := tm.WithTransaction(func(tx *db.TransactionManager) error {
-	// Обновление инвентаря
-	querySubsctruct := `UPDATE inventory SET quantity = quantity - $1 WHERE id = $2`
-	for _, ingredient := range ingredients {
-		// Используем Exec, передавая элементы по одному
-		_, err := r.db.Exec(querySubsctruct, ingredient.Quantity, ingredient.IngredientID)
+	// Проверяем хватает ли в инвентаре ингридиентов для закрытия текущего заказа
+	// и собираем информацию о текущих количествах
+	queryCheck := `SELECT id, ingredient_name, quantity FROM inventory WHERE id = $1`
+
+	type inventoryItem struct {
+		ID       int
+		Name     string
+		Quantity float64
+	}
+
+	inventoryItems := make(map[int]inventoryItem)
+
+	for ingredientID, requiredQuantity := range ingredientQuantities {
+		var item inventoryItem
+		err := r.db.QueryRow(queryCheck, ingredientID).Scan(&item.ID, &item.Name, &item.Quantity)
 		if err != nil {
-			return models.Order{}, fmt.Errorf("failed to update inventory: %v", err)
+			return models.Order{}, nil, fmt.Errorf("failed to check inventory: %v", err)
 		}
+		if item.Quantity < requiredQuantity {
+			return models.Order{}, nil, fmt.Errorf("insufficient inventory for ingredient ID %d (available: %f, required: %f)",
+				ingredientID, item.Quantity, requiredQuantity)
+		}
+		inventoryItems[ingredientID] = item
 	}
 
-	queryClosing := `UPDATE orders SET status = $2, updated_at = NOW() WHERE id = $1`
-	result, err := r.db.Exec(queryClosing, id, "closed")
-	if err != nil {
-		return models.Order{}, fmt.Errorf("error while closing order: %v", err)
+	// Создаем слайс для отслеживания обновлений инвентаря
+	var inventoryUpdates []struct {
+		IngredientID int     `json:"ingredient_id"`
+		Name         string  `json:"name"`
+		QuantityUsed float64 `json:"quantity_used"`
+		Remaining    float64 `json:"remaining"`
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return models.Order{}, fmt.Errorf("failed to get number of affected rows: %v", err)
+	errTransact := database.WithTransaction(r.db, func(tx *sql.Tx) error {
+		// Обновление инвентаря
+		querySubsctruct := `UPDATE inventory SET quantity = quantity - $1 WHERE id = $2 RETURNING quantity`
+		for ingredientID, requiredQuantity := range ingredientQuantities {
+			// Используем QueryRow вместо Exec, чтобы получить оставшееся количество
+			var reorderThreshold float64
+			var remaining float64
+			err := tx.QueryRow(querySubsctruct, requiredQuantity, ingredientID).Scan(&remaining)
+			if err != nil {
+				return fmt.Errorf("failed to update inventory: %v", err)
+			}
+
+			// порог перезаказа:
+			reorderThresholdQuery := `SELECT quantity, reorder_threshold FROM inventory WHERE id = $1`
+			err = tx.QueryRow(reorderThresholdQuery, ingredientID).Scan(&remaining, &reorderThreshold)
+			if err != nil {
+				return fmt.Errorf("failed to check inventory: %v", err)
+			}
+
+			if remaining <= reorderThreshold {
+				slog.Warn("⚠️ Warning!")
+				slog.Warn("⚠️ Ingredient %d is below reorder threshold (%f left)\n", ingredientID, remaining)
+				// Тут можно добавить логику создания заказа поставщику
+			}
+
+			// Добавляем информацию об обновлении в слайс
+			inventoryUpdates = append(inventoryUpdates, struct {
+				IngredientID int     `json:"ingredient_id"`
+				Name         string  `json:"name"`
+				QuantityUsed float64 `json:"quantity_used"`
+				Remaining    float64 `json:"remaining"`
+			}{
+				IngredientID: ingredientID,
+				Name:         inventoryItems[ingredientID].Name,
+				QuantityUsed: requiredQuantity,
+				Remaining:    remaining,
+			})
+		}
+
+		queryClosing := `UPDATE orders SET status = $2, updated_at = NOW() WHERE id = $1`
+		result, err := tx.Exec(queryClosing, id, "closed")
+		if err != nil {
+			return fmt.Errorf("error while closing order: %v", err)
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("failed to get number of affected rows: %v", err)
+		}
+
+		if rowsAffected == 0 {
+			return fmt.Errorf("order with ID %d not found", id)
+		}
+
+		return nil
+	})
+
+	if errTransact != nil {
+		return models.Order{}, nil, errTransact
 	}
 
-	if rowsAffected == 0 {
-		return models.Order{}, fmt.Errorf("order with ID %d not found", id)
-	}
-
-	// return  nil
-	// })
-	// if errTransact != nil {
-	// 	return models.Order{}, errTransact
-	// }
 	order, errLoad = r.LoadOrder(id)
 	if errLoad != nil {
-		return models.Order{}, errLoad
+		return models.Order{}, nil, errLoad
 	}
 
-	return order, nil
+	return order, inventoryUpdates, nil
 }
 
 func (r OrderRepository) GetOrderedItemsCount(start, end time.Time) (map[string]int, error) {

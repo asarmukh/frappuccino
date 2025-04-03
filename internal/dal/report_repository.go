@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"frappuccino/models"
-	"strconv"
 	"strings"
 	"time"
 
@@ -118,9 +117,13 @@ func (r ReportRepository) GetPopularItems() ([]models.MenuItem, error) {
 }
 
 func (r *ReportRepository) GetOrderedItemsByDay(month string) ([]models.OrderItemReport, error) {
+	if month == "" {
+		return nil, fmt.Errorf("month is required when period is 'day'")
+	}
+
 	monthInt, err := time.Parse("January", month)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid month name: %w", err)
 	}
 	monthNumber := int(monthInt.Month())
 
@@ -140,13 +143,14 @@ func (r *ReportRepository) GetOrderedItemsByDay(month string) ([]models.OrderIte
 
 	var result []models.OrderItemReport
 	for rows.Next() {
-		var day, count int
+		var day string
+		var count int
 		if err := rows.Scan(&day, &count); err != nil {
 			return nil, err
 		}
 
 		result = append(result, models.OrderItemReport{
-			Period: strconv.Itoa(day),
+			Period: day,
 			Count:  count,
 		})
 	}
@@ -155,6 +159,10 @@ func (r *ReportRepository) GetOrderedItemsByDay(month string) ([]models.OrderIte
 }
 
 func (r *ReportRepository) GetOrderedItemsByMonth(year int) ([]models.OrderItemReport, error) {
+	if year == 0 {
+		return nil, fmt.Errorf("year is required when period is 'month'")
+	}
+
 	query := `
         SELECT TO_CHAR(created_at, 'Month') AS month, COUNT(*) 
         FROM orders 

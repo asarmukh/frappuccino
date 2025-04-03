@@ -15,6 +15,9 @@ type ReportHandlerInterface interface {
 	HandleGetPopularItems(w http.ResponseWriter, r *http.Request)
 	HandleSearch(w http.ResponseWriter, r *http.Request)
 	HandleGetOrderedItemsByPeriod(w http.ResponseWriter, r *http.Request)
+	HandleGetPopularItems(w http.ResponseWriter, r *http.Request)
+	HandleSearch(w http.ResponseWriter, r *http.Request)
+	HandleGetOrderedItemsByPeriod(w http.ResponseWriter, r *http.Request)
 }
 
 type ReportHandler struct {
