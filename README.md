@@ -1,72 +1,54 @@
-# Frappuccino - Coffee Shop Management System with PostgreSQL
+# Frappuccino ☕
 
-A modern and scalable backend system for managing coffee shop operations, extending the original Hot Coffee project by migrating from JSON-based storage to a PostgreSQL database. This RESTful API service helps coffee shops streamline their operations with improved data management, advanced reporting capabilities, and enhanced performance.
+A PostgreSQL-based coffee shop management system built with Go, featuring order management, inventory tracking, and advanced reporting capabilities.
 
-## Project Overview
+## 📋 Overview
 
-Frappuccino is an upgrade to the existing Hot Coffee project, refactoring the data access layer to use PostgreSQL instead of JSON files. This transition enhances scalability, improves data integrity, and enables more complex queries and reporting features.
+Frappuccino is a refactored version of the hot-coffee project, migrated from JSON-based storage to a robust PostgreSQL database. This project demonstrates advanced SQL operations, database design principles, and RESTful API development.
 
-## Features
+## 🎯 Features
 
-### Core Features (Migrated from Hot Coffee)
-- **Order Management**: Create, retrieve, update, and delete customer orders
-- **Menu Management**: Manage coffee shop menu items and their ingredients
-- **Inventory Tracking**: Track ingredient stock levels and automatically update on order fulfillment
+### Core Functionality
+- **Order Management**: Create, read, update, delete, and close orders
+- **Menu Management**: Full CRUD operations for menu items
+- **Inventory Control**: Track ingredients and stock levels
+- **Price History**: Monitor menu item price changes over time
+- **Order Status Tracking**: Follow order lifecycle through status transitions
 
-### New Features
-- **Advanced Reporting**: Enhanced reporting capabilities using SQL aggregation
-- **Full-Text Search**: Search through orders, menu items, and customers
-- **Period-Based Analysis**: View orders grouped by day or month
-- **Inventory Management**: Track leftovers with sorting and pagination
-- **Bulk Order Processing**: Process multiple orders simultaneously with transaction support
-- **Database Optimization**: Proper indexing and relation design for better performance
+### Advanced Features
+- **Full-Text Search**: Search across orders, menu items, and customers with relevance ranking
+- **Sales Reports**: Total sales and popular items analytics
+- **Time-Based Analytics**: Track orders by day or month
+- **Batch Order Processing**: Handle multiple concurrent orders with transaction support
+- **Inventory Pagination**: Sorted and paginated inventory views
 
-## Technologies Used
+## 🏗️ Database Architecture
 
-- Go 1.21 or higher
-- PostgreSQL 15
-- Docker & Docker Compose for containerization
-- Third-party PostgreSQL driver
+### Core Tables
+- `orders` - Main order information with customer details
+- `order_items` - Individual items within orders
+- `menu_items` - Available products for sale
+- `menu_item_ingredients` - Recipe definitions
+- `inventory` - Ingredient stock management
+- `order_status_history` - Order state change tracking
+- `price_history` - Menu item price changes
+- `inventory_transactions` - Stock movement records
 
-## Project Structure
+### Advanced PostgreSQL Features
+- **JSONB**: Menu customizations, order instructions, customer preferences
+- **Arrays**: Categories, allergens, tags
+- **ENUMs**: Order status, payment methods, item sizes
+- **Timestamps with timezone**: Accurate time tracking across operations
+- **Full-text search indexes**: Fast search capabilities
+- **Composite indexes**: Optimized query performance
 
-```
-frappuccino/
-├── cmd/
-│   └── main.go
-├── internal/
-│   ├── handler/
-│   │   ├── order_handler.go
-│   │   ├── menu_handler.go
-│   │   ├── inventory_handler.go
-│   │   └── reports_handler.go
-│   ├── service/
-│   │   ├── order_service.go
-│   │   ├── menu_service.go
-│   │   └── inventory_service.go
-│   └── repository/
-│       ├── order_repository.go
-│       └── ...
-├── models/
-│   ├── order.go
-│   └── ...
-├── Dockerfile
-├── docker-compose.yml
-├── init.sql
-├── go.mod
-└── go.sum
-```
-
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
+- Docker
+- Docker Compose
 
-- Docker and Docker Compose installed
-- Go 1.21+ (for development)
-
-### Running the Application
-
-The project is containerized with Docker for easy setup and deployment:
+### Installation
 
 1. Clone the repository:
 ```bash
@@ -74,106 +56,104 @@ git clone <repository-url>
 cd frappuccino
 ```
 
-2. Start the application using Docker Compose:
+2. Ensure the following files are in the root directory:
+   - `Dockerfile`
+   - `docker-compose.yml`
+   - `init.sql`
+
+3. Start the application:
 ```bash
 docker compose up
 ```
 
-This will:
-- Set up a PostgreSQL database container
-- Initialize the database schema using `init.sql`
-- Build and run the application container
-
 The API will be available at `http://localhost:8080`
 
-## API Endpoints
+### Database Connection Settings
+- **Host**: db
+- **Port**: 5432
+- **User**: latte
+- **Password**: latte
+- **Database**: frappuccino
 
-### Original Endpoints (Refactored for PostgreSQL)
+## 📡 API Endpoints
 
-#### Orders
+### Orders
 - `POST /orders` - Create a new order
 - `GET /orders` - Retrieve all orders
-- `GET /orders/{id}` - Retrieve a specific order
-- `PUT /orders/{id}` - Update an existing order
-- `DELETE /orders/{id}` - Delete an order
-- `POST /orders/{id}/close` - Close an order
-
-#### Menu Items
-- `POST /menu` - Add a new menu item
-- `GET /menu` - Retrieve all menu items
-- `GET /menu/{id}` - Retrieve a specific menu item
-- `PUT /menu/{id}` - Update a menu item
-- `DELETE /menu/{id}` - Delete a menu item
-
-#### Inventory
-- `POST /inventory` - Add a new inventory item
-- `GET /inventory` - Retrieve all inventory items
-- `GET /inventory/{id}` - Retrieve a specific inventory item
-- `PUT /inventory/{id}` - Update an inventory item
-- `DELETE /inventory/{id}` - Delete an inventory item
-
-#### Basic Reports
-- `GET /reports/total-sales` - Get total sales amount
-- `GET /reports/popular-items` - Get list of popular menu items
-
-### New Endpoints
-
-#### Advanced Reporting and Search
-- `GET /orders/numberOfOrderedItems` - Get ordered items count within a date range
-- `GET /reports/search` - Full-text search across orders, menu items, and customers
-- `GET /reports/orderedItemsByPeriod` - Get order counts grouped by day or month
-- `GET /inventory/getLeftOvers` - Get inventory leftovers with sorting and pagination
+- `GET /orders/{id}` - Get specific order
+- `PUT /orders/{id}` - Update order
+- `DELETE /orders/{id}` - Delete order
+- `POST /orders/{id}/close` - Close order
+- `GET /orders/numberOfOrderedItems` - Get ordered items count by date range
 - `POST /orders/batch-process` - Process multiple orders simultaneously
 
-## Database Design
+### Menu Items
+- `POST /menu` - Add new menu item
+- `GET /menu` - Retrieve all menu items
+- `GET /menu/{id}` - Get specific menu item
+- `PUT /menu/{id}` - Update menu item
+- `DELETE /menu/{id}` - Delete menu item
 
-The project includes a comprehensive database schema that utilizes PostgreSQL's features:
+### Inventory
+- `POST /inventory` - Add inventory item
+- `GET /inventory` - Retrieve all inventory
+- `GET /inventory/{id}` - Get specific inventory item
+- `PUT /inventory/{id}` - Update inventory
+- `DELETE /inventory/{id}` - Delete inventory item
+- `GET /inventory/getLeftOvers` - Get paginated inventory with sorting
 
-### Data Types
-- **JSONB**: Used for menu item customization options, order special instructions
-- **Arrays**: Used for item categories/tags, allergen information
-- **ENUM**: Used for order status values, payment methods, item sizes
-- **Timestamp with time zone**: Used for order dates, inventory updates
+### Reports & Analytics
+- `GET /reports/total-sales` - Total sales amount
+- `GET /reports/popular-items` - Most popular menu items
+- `GET /reports/search` - Full-text search across entities
+- `GET /reports/orderedItemsByPeriod` - Orders grouped by time period
 
-### Core Tables
-- **orders**: Main order information
-- **order_items**: Individual items in each order
-- **menu_items**: Available products for sale
-- **menu_item_ingredients**: Junction table between menu items and ingredients
-- **inventory**: Available ingredients and stock levels
-- **order_status_history**: Order state changes
-- **price_history**: Menu item price changes
-- **inventory_transactions**: Inventory changes
+## 📊 Example API Calls
 
-## Development
-
-### Database Connection Settings
-```
-Host: db
-Port: 5432
-User: latte
-Password: latte
-Database: frappuccino
+### Search Menu and Orders
+```bash
+GET /reports/search?q=chocolate%20cake&filter=menu,orders&minPrice=10
 ```
 
-### Database Schema
-The database schema is defined in `init.sql`, which is automatically executed when the containers start.
+### Get Ordered Items Count
+```bash
+GET /orders/numberOfOrderedItems?startDate=2024-11-01&endDate=2024-11-30
+```
 
-## Error Handling
+### Get Monthly Order Statistics
+```bash
+GET /reports/orderedItemsByPeriod?period=month&year=2024
+```
 
-The API returns appropriate HTTP status codes and error messages:
-- 200: Successful GET request
-- 201: Successful resource creation
-- 400: Bad request/Invalid input
-- 404: Resource not found
-- 500: Internal server error
+### Get Inventory with Pagination
+```bash
+GET /inventory/getLeftOvers?sortBy=quantity&page=1&pageSize=10
+```
 
-## Contributing
+### Batch Order Processing
+```bash
+POST /orders/batch-process
+Content-Type: application/json
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+{
+  "orders": [
+    {
+      "customer_name": "Alice",
+      "items": [
+        {"menu_item_id": 1, "quantity": 2}
+      ]
+    }
+  ]
+}
+```
 
-## INFO.txt - data for developers
+## 🛠️ Technical Requirements
+
+- **Language**: Go (with gofumpt formatting)
+- **Database**: PostgreSQL
+- **Driver**: PostgreSQL driver (only external package allowed)
+- **Architecture**: Layered architecture with Data Access Layer (DAL)
+- **Containerization**: Docker and Docker Compose
+---
+
+**Note**: For detailed endpoint specifications and response formats, refer to the project documentation above.
